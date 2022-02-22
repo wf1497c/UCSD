@@ -1,11 +1,10 @@
 '''
 Frame transformation module
 '''
-
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-
+ 
 def rot_z(psi):
     R_z = np.array([[math.cos(psi),    -math.sin(psi),    0],
                     [math.sin(psi),     math.cos(psi),    0],
@@ -46,5 +45,78 @@ def lidarToVehicleTransform():
 
     return v_T_l
 
-lidarToVehicleTransform()
-print('a')
+def polar2cart(lidar_data):
+    '''
+    transform polar coordinate system to cartesian system 
+    '''
+    angles = np.linspace(-5, 185, 286) / 180 * np.pi
+    ranges = lidar_data[0, :]
+    x = ranges * np.cos(angles)
+    y = ranges * np.sin(angles)
+
+    x = x[:, np.newaxis]
+    y = y[:, np.newaxis]
+
+    return x.T, y.T
+
+def lidarToWorldTransform(x_cur, y_cur, yaw_cur):
+    '''
+    Input:
+        x_l, y_l: coordinates in lidar frame
+        x_cur, y_cur: particles' coordinates in world frame
+        yaw: vehicle yaw angle
+    Output:
+        w_T_l: transformaion from lidar frame to world frame
+    '''
+    v_T_l = lidarToVehicleTransform()
+    w_T_v = vehicleToWorldTransform(x_cur, y_cur, yaw_cur)
+    w_T_l = np.matmul(w_T_v,v_T_l)
+
+    return w_T_l
+
+def lidarToWorld(x_l, y_l, x_cur, y_cur, yaw_cur):
+    '''
+    Input:
+        x_l, y_l: coordinates in lidar frame
+        x_cur, y_cur: particles' coordinates in world frame
+        yaw: vehicle yaw angle
+    Output: 
+        x_w, y_w: point (x_l,y_l) in world frame
+    '''
+    w_T_l = lidarToWorldTransform(x_cur,y_cur,yaw_cur)
+    coordinates_l = np.vstack((np.vstack((x_l, y_l)), np.zeros((1, x_l.shape[1])), np.ones((1, x_l.shape[1]))))
+    coordinates_w = np.matmul(w_T_l, coordinates_l)
+
+    x_w = coordinates_w[0, :]
+    y_w = coordinates_w[1, :]
+    z_w = coordinates_w[2, :]
+    
+    x_w = x_w[:, np.newaxis]
+    y_w = y_w[:, np.newaxis]
+    z_w = z_w[:, np.newaxis]
+    
+    # remove scans that are too close to the ground
+    indValid = (z_w > 0.1)
+    x_w = x_w[indValid]
+    y_w = y_w[indValid]
+    z_w = z_w[indValid]
+
+    return (x_w, y_w, z_w)
+
+def worldToMap(MAP, x_w, y_w): 
+    '''
+    transform fromt world frame to occupancy grid map
+    Input:
+        MAP: occupancy grid map
+        x_v, y_v: coordinates in world frame
+    '''
+    # convert from meters to cells
+    x_m = np.ceil((x_w - MAP['xmin']) / MAP['res']).astype(np.int16) - 1
+    y_m = np.ceil((y_w - MAP['ymin']) / MAP['res']).astype(np.int16) - 1
+    
+    indGood = np.logical_and(np.logical_and(np.logical_and((x_m > 1), (y_m > 1)), (x_m < MAP['sizex'])),(y_m < MAP['sizey']))
+    
+    x_m = x_m[indGood]
+    y_m = y_m[indGood]
+    
+    return x_m.astype(np.int), y_m.astype(np.int)

@@ -7,7 +7,7 @@ from pr2_utils import read_data_from_csv
 import math
 import transformation
 
-class data_process():
+class getData():
     def __init__(self):
         lidar_path = os.path.abspath('./Lidar/lidar.csv')
         fog_path = os.path.abspath('./FOG/fog.csv')
@@ -17,7 +17,9 @@ class data_process():
         self.fog_timestamp, self.fog_data = read_data_from_csv(fog_path)
         self.encoder_timestamp, self.encoder_data = read_data_from_csv(encoder_path)
 
-        self.synchronize(self.fog_data, self.encoder_data, self.fog_timestamp) 
+        self.fog_data, self.fog_timestamp = self.synchronize(self.fog_data, self.encoder_data, self.fog_timestamp)
+        self.yaw = self.fog_data[:,2]
+        self.v = self.linear_velocity(self.encoder_timestamp, self.encoder_data) 
 
         pass
 
@@ -37,11 +39,8 @@ class data_process():
             syn_fog_list.insert(0,0)                                            # sum of delta RPY at first time step should be zero
             syn_fog.append(syn_fog_list[0:len(syn_fog_list)-1])
             syn_fog_timestamp.append(syn_fog_t_list)
-        
-        self.fog_data = np.array(syn_fog).T
-        self.fog_timestamp = np.array(syn_fog_timestamp).T
 
-        pass
+        return np.array(syn_fog).T, np.array(syn_fog_timestamp).T
 
     def linear_velocity(self, encoder_timestamp, encoder_data):
         '''
@@ -57,6 +56,14 @@ class data_process():
         v = (vl + vr) / 2
 
         return v
+
+    def vehiclePositionWorldFrame(self):
+        '''
+        compute vehicle position in world frame by odometry for whole process
+        Input:
+            self.v: linear velocity of vehicle
+            self.yaw: yaw angle of vehicle
+        '''
     
     def lidar_based_localization_prediction(self, x_t, u_t, w_t, t_interval):
         '''
@@ -80,19 +87,8 @@ class data_process():
 
         return x_t_1
 
-    def transformation_lidar_to_body(self, lidar_data, R_B_to_S, p_B_to_S):
-        '''
-        Input: FOG/lidar sensor data, rotation matrix, and translation
-        Output: data in body frame 
-        Rotation and translation was from vehicle to sensor, which are given in Vehicle2Lidar.txt
-        '''
-        angles = np.linspace(-5, 185, 286) / 180 * np.pi
-        ranges = lidar_data[0, :]
-
-
 
 if __name__ == '__main__':
-    data = data_process()
-    vl = data.linear_velocity(data.encoder_timestamp,data.encoder_data)
-    print(data.lidar_data.shape)
+    data = getData()
+    
     

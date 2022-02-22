@@ -10,7 +10,6 @@ def tic():
 def toc(tstart, name="Operation"):
   print('%s took: %s sec.\n' % (name,(time.time() - tstart)))
 
-
 def compute_stereo():
   path_l = 'data/image_left.png'
   path_r = 'data/image_right.png'
@@ -195,8 +194,6 @@ def test_mapCorrelation():
 
   x_range = np.arange(-0.4,0.4+0.1,0.1)
   y_range = np.arange(-0.4,0.4+0.1,0.1)
-
-
   
   print("Testing map_correlation with {}x{} cells".format(MAP['sizex'],MAP['sizey']))
   ts = tic()
