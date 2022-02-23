@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from pr2_utils import read_data_from_csv
-import math
+import scipy
 import transformation
 
 def initializeParticles(num = None, n_thresh = None, noise_cov = None):
@@ -53,8 +53,8 @@ def updateParticles(PARTICLES, MAP, x_l, y_l, psi, theta):
     _, plot = cv2.threshold(MAP['plot'], 127, 255, cv2.THRESH_BINARY)
     
     for i in range(PARTICLES['num']):
-        x_w, y_w, _ = lidar2world(psi, theta, x_l, y_l, PARTICLES['poses'][i][0], PARTICLES['poses'][i][1], PARTICLES['poses'][i][2])        
-        x_m, y_m = world2map(MAP, x_w, y_w)
+        x_w, y_w, _ = transformation.lidarToWorld(x_l, y_l, PARTICLES['poses'][i][0], PARTICLES['poses'][i][1], PARTICLES['poses'][i][2])        
+        x_m, y_m = transformation.worldToMap(MAP, x_w, y_w)
         
         particle_plot = np.zeros(MAP['plot'].shape)
         particle_plot[y_m, x_m] = [0, 1, 0]

@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt; plt.ion()
 from mpl_toolkits.mplot3d import Axes3D
 import time
+import os
 
 def tic():
   return time.time()
@@ -156,7 +157,7 @@ def test_mapCorrelation():
   ranges = lidar_data[0, :]
 
   # take valid indices
-  indValid = np.logical_and((ranges < 80),(ranges> 0.1))
+  indValid = [range < 80 and range > 0.1 for range in ranges] ###
   ranges = ranges[indValid]
   angles = angles[indValid]
 
