@@ -155,12 +155,11 @@ class getData():
 
 if __name__ == '__main__':
     data = getData()
-    MAP, particles, TRAJECTORY_w, TRAJECTORY_m = data.initializeSLAM(5)
+    MAP, particles, TRAJECTORY_w, TRAJECTORY_m = data.initializeSLAM(1)
 
-    for i in range(20):#len(data.lidar_data)):
-
-        lidar_angle = np.linspace(-5, 185, 286) / 180 * np.pi
+    for i in range(1):#len(data.lidar_data)):
         lidar_range = data.lidar_data[i, :]
+        lidar_angle = np.linspace(-5, 185, 286) / 180 * np.pi
 
         # Remove scan points that are too close or too far
         indValid = [range < 80 and range > 0.1 for range in lidar_range]
@@ -190,7 +189,6 @@ if __name__ == '__main__':
         x_l, y_l = np.double(transformation.polar2cart(lidar_range, lidar_angle))
         x_cur, y_cur, yaw_cur = TRAJECTORY_w['particle'][0][0], TRAJECTORY_w['particle'][0][1], TRAJECTORY_w['particle'][0][2]
         x_w, y_w, _ = transformation.lidarToWorld(x_l, y_l, x_cur, y_cur, yaw_cur)
-
         x_m, y_m = transformation.worldToMap(MAP, x_w, y_w)
         
         if(i == 0):
@@ -200,32 +198,31 @@ if __name__ == '__main__':
             plt.savefig('map.png')
 
         # particle filter steps. Resample is called in the updateParticles() function
-        particle.predictParticles(particles, delta_pose[0], delta_pose[1], delta_pose[2], pose[0], pose[1], pose[2])
-        particle.updateParticles(particles, MAP, x_l, y_l)
-        
+        #particle.predictParticles(particles, delta_pose[0], delta_pose[1], delta_pose[2], pose[0], pose[1], pose[2])
+        #particle.updateParticles(particles, MAP, x_l, y_l)
+        #print("prediction done")
         # update trajectories again
-        pose = particles['poses'][np.argmax(particles['weights']), :]
+        #pose = particles['poses'][np.argmax(particles['weights']), :]
             
-        TRAJECTORY_w['particle'].append(pose)
-        x_m, y_m = transformation.worldToMap(MAP, TRAJECTORY_w['particle'][i][0], TRAJECTORY_w['particle'][i][1])
-        TRAJECTORY_m['particle'].append(np.array([x_m, y_m, pose[2]]))
+        #TRAJECTORY_w['particle'].append(pose)
+        #x_m, y_m = transformation.worldToMap(MAP, TRAJECTORY_w['particle'][i][0], TRAJECTORY_w['particle'][i][1])
+        #TRAJECTORY_m['particle'].append(np.array([x_m, y_m, pose[2]]))
         
         # update map based on particle's view of lidar scan
-        occupancy_grid_map.updateMap(MAP, x_w, y_w, pose[0], pose[1])
+        #occupancy_grid_map.updateMap(MAP, x_w, y_w, pose[0], pose[1])
 
 
-        if i % 1000 == 0:
-            print(x_m)
+        #if i % 1000 == 0:
+        #    print(x_m)
             #print(TRAJECTORY_m['odometry'][i][0], TRAJECTORY_m['odometry'][i][1])
 
     traj_x_m = []
     traj_y_m = []
-    for i in range(len(TRAJECTORY_m['particle'])):
-        traj_x_m.append(TRAJECTORY_m['particle'][i][0])
-        traj_y_m.append(TRAJECTORY_m['particle'][i][1])
+    for i in range(len(TRAJECTORY_m['odometry'])):
+        traj_x_m.append(TRAJECTORY_m['odometry'][i][0])
+        traj_y_m.append(TRAJECTORY_m['odometry'][i][1])
     
-    plt.imshow(np.zeros([1601, 1601]))
-    plt.scatter(traj_x_m, traj_y_m, c = 'r')
-    plt.savefig('Trajectory')
+    #plt.scatter(traj_x_m, traj_y_m, c = 'r')
+    #plt.savefig('Trajectory')
 
     print('b')
