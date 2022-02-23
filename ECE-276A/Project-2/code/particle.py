@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from pr2_utils import read_data_from_csv
-import scipy
+from scipy import special
 import transformation
 
 def initializeParticles(num = None, n_thresh = None, noise_cov = None):
@@ -40,7 +40,7 @@ def predictParticles(PARTICLES, d_x, d_y, d_yaw, x_prev, y_prev, yaw_prev):
     PARTICLES['poses'] += np.array([[d_x, d_y, d_yaw]])
     return
 
-def updateParticles(PARTICLES, MAP, x_l, y_l, psi, theta):
+def updateParticles(PARTICLES, MAP, x_l, y_l):
     
     n_eff = 1 / np.sum(np.square(PARTICLES['weights']))
     
@@ -61,7 +61,7 @@ def updateParticles(PARTICLES, MAP, x_l, y_l, psi, theta):
 
         correlations[i] = np.sum(np.logical_and(plot, particle_plot)) # switched x and y
     
-    weights = scipy.special.softmax(correlations - np.max(correlations)) # np.multiply(PARTICLES['weights'], scipy.special.softmax(correlations)) # multiply or add or replace?
+    weights = special.softmax(correlations - np.max(correlations)) # np.multiply(PARTICLES['weights'], scipy.special.softmax(correlations)) # multiply or add or replace?
 
     if (np.count_nonzero(correlations) == 0):
         print("ALL ZERO CORRELATIONS")

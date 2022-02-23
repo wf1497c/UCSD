@@ -25,11 +25,11 @@ def vehicleToWorldTransform(x, y, yaw):
     R = rot_z(yaw)
 
     w_T_v = np.vstack((R, np.zeros((1,3))))
-    w_T_v = np.hstack((w_T_v, np.array(([x], [y], [b], [1]))))
-
+    w_T_v = np.hstack((w_T_v, np.array(([x], [y], [0], [1]))))
+    
     return w_T_v
 
-def lidarToVehicleTransform():
+def lidarToVehicleTransform(): # correct
     '''
     Output:
         v_T_l: Transformation from lidar to vehicle frame
@@ -38,21 +38,23 @@ def lidarToVehicleTransform():
                     [0.999999, -0.000419027, -0.00160026],
                     [-0.00102038, 0.605169, -0.796097]
                     ])
-    l_p_v = np.array([0.8349, -0.0126869, 1.76416])
+    l_p_v = np.array([[0.8349, -0.0126869, 1.76416, 1]])
 
-    v_T_l = np.vstack((l_R_v.T, np.zeros((1,3))))
-    v_T_l = np.hstack((v_T_l, np.array([np.append(-l_R_v.T.dot(l_p_v),1),]).T))
+    v_T_l = np.vstack([l_R_v, np.zeros(3)])
+    v_T_l = np.hstack([v_T_l, l_p_v.T])
+    #v_T_l = np.vstack((l_R_v.T, np.zeros((1,3))))
+    #v_T_l = np.hstack((v_T_l, np.array([np.append(-l_R_v.T.dot(l_p_v),1),]).T))
+
+    origin = v_T_l.dot(np.array([0,0,0,1]))
 
     return v_T_l
 
-def polar2cart(lidar_data):
+def polar2cart(lidar_data, lidar_angle):
     '''
     transform polar coordinate system to cartesian system 
     '''
-    angles = np.linspace(-5, 185, 286) / 180 * np.pi
-    ranges = lidar_data[0, :]
-    x = ranges * np.cos(angles)
-    y = ranges * np.sin(angles)
+    x = lidar_data * np.cos(lidar_angle)
+    y = lidar_data * np.sin(lidar_angle)
 
     x = x[:, np.newaxis]
     y = y[:, np.newaxis]
@@ -63,29 +65,31 @@ def lidarToWorldTransform(x_cur, y_cur, yaw_cur):
     '''
     Input:
         x_l, y_l: coordinates in lidar frame
-        x_cur, y_cur: particles' coordinates in world frame
-        yaw: vehicle yaw angle
+        x_cur, y_cur: vehicle's coordinate in world frame
+        yaw_cur: vehicle's yaw angle
     Output:
         w_T_l: transformaion from lidar frame to world frame
     '''
     v_T_l = lidarToVehicleTransform()
     w_T_v = vehicleToWorldTransform(x_cur, y_cur, yaw_cur)
-    w_T_l = np.matmul(w_T_v,v_T_l)
+    w_T_l = w_T_v.dot(v_T_l)
+    origin = w_T_l.dot(np.array([0,0,0,1]))
 
     return w_T_l
 
-def lidarToWorld(x_l, y_l, x_cur, y_cur, yaw_cur):
+def lidarToWorld(x_l, y_l, x_cur, y_cur, yaw_cur): ###
     '''
     Input:
         x_l, y_l: coordinates in lidar frame
-        x_cur, y_cur: particles' coordinates in world frame
-        yaw: vehicle yaw angle
+        x_cur, y_cur: vehicle's coordinate in world frame
+        yaw_cur: vehicle's yaw angle
     Output: 
         x_w, y_w: point (x_l,y_l) in world frame
     '''
     w_T_l = lidarToWorldTransform(x_cur,y_cur,yaw_cur)
     coordinates_l = np.vstack((np.vstack((x_l, y_l)), np.zeros((1, x_l.shape[1])), np.ones((1, x_l.shape[1]))))
-    coordinates_w = np.matmul(w_T_l, coordinates_l)
+    coordinates_w = w_T_l.dot(coordinates_l)
+    origin = w_T_l.dot(np.array([0,0,0,1]))
 
     x_w = coordinates_w[0, :]
     y_w = coordinates_w[1, :]
@@ -108,15 +112,15 @@ def worldToMap(MAP, x_w, y_w):
     transform fromt world frame to occupancy grid map
     Input:
         MAP: occupancy grid map
-        x_v, y_v: coordinates in world frame
+        x_w, y_w: coordinates in world frame
     '''
     # convert from meters to cells
     x_m = np.ceil((x_w - MAP['xmin']) / MAP['res']).astype(np.int16) - 1
     y_m = np.ceil((y_w - MAP['ymin']) / MAP['res']).astype(np.int16) - 1
+
+    #indGood = np.logical_and(np.logical_and(np.logical_and((x_m > 1), (y_m > 1)), (x_m < MAP['sizex'])),(y_m < MAP['sizey']))
     
-    indGood = np.logical_and(np.logical_and(np.logical_and((x_m > 1), (y_m > 1)), (x_m < MAP['sizex'])),(y_m < MAP['sizey']))
-    
-    x_m = x_m[indGood]
-    y_m = y_m[indGood]
+    #x_m = x_m[indGood]
+    #y_m = y_m[indGood]
     
     return x_m.astype(np.int), y_m.astype(np.int)
