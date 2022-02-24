@@ -4,6 +4,7 @@ import cv2
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+from torch import float64
 from pr2_utils import read_data_from_csv
 import math
 import transformation
@@ -142,7 +143,7 @@ class getData():
 
 
     def initializeSLAM(self, num_particles):
-        MAP = occupancy_grid_map.initializeMap(0.1,-80,-80,80,80)
+        MAP = occupancy_grid_map.initializeMap(0.1,-20,-20,200,200) # res, xmin, ymin, xmax, ymax
         particles = particle.initializeParticles(num_particles)
         TRAJECTORY_w = {}
         TRAJECTORY_w['particle'] = []
@@ -155,13 +156,15 @@ class getData():
 
 if __name__ == '__main__':
     data = getData()
-    MAP, particles, TRAJECTORY_w, TRAJECTORY_m = data.initializeSLAM(1)
+    MAP, particles, TRAJECTORY_w, TRAJECTORY_m = data.initializeSLAM(2)
+    time_all = 500
 
-    for i in range(1):#len(data.lidar_data)):
+    for i in range(time_all):#len(data.lidar_data)):
         lidar_range = data.lidar_data[i, :]
         lidar_angle = np.linspace(-5, 185, 286) / 180 * np.pi
 
         # Remove scan points that are too close or too far
+        #lidar_range[lidar_range == 0] = 79 # !!! 
         indValid = [range < 80 and range > 0.1 for range in lidar_range]
         lidar_range = lidar_range[indValid]
         lidar_angle = lidar_angle[indValid]
@@ -187,34 +190,46 @@ if __name__ == '__main__':
             TRAJECTORY_m['odometry'].append(np.array([o_x_m, o_y_m, TRAJECTORY_w['odometry'][i][2]]))
 
         x_l, y_l = np.double(transformation.polar2cart(lidar_range, lidar_angle))
-        x_cur, y_cur, yaw_cur = TRAJECTORY_w['particle'][0][0], TRAJECTORY_w['particle'][0][1], TRAJECTORY_w['particle'][0][2]
-        x_w, y_w, _ = transformation.lidarToWorld(x_l, y_l, x_cur, y_cur, yaw_cur)
-        x_m, y_m = transformation.worldToMap(MAP, x_w, y_w)
+        x_w, y_w, _ = transformation.lidarToWorld(x_l, y_l, pose[0], pose[1], pose[2])
         
         if(i == 0):
-            occupancy_grid_map.updateMap(MAP, x_w, y_w, x_cur, y_cur)
+            occupancy_grid_map.updateMap(MAP, x_w, y_w, pose[0], pose[1])
 
             plt.imshow(MAP['plot'])
             plt.savefig('map.png')
 
         # particle filter steps. Resample is called in the updateParticles() function
-        #particle.predictParticles(particles, delta_pose[0], delta_pose[1], delta_pose[2], pose[0], pose[1], pose[2])
-        #particle.updateParticles(particles, MAP, x_l, y_l)
-        #print("prediction done")
+        particle.predictParticles(particles, delta_pose[0], delta_pose[1], delta_pose[2], pose[0], pose[1], pose[2])
+        particle.updateParticles(particles, MAP, x_l, y_l)
+
+        print("Timestep:" + str(i+1) + "/" + str(time_all))
         # update trajectories again
-        #pose = particles['poses'][np.argmax(particles['weights']), :]
+        pose = particles['poses'][np.argmax(particles['weights']), :]
             
-        #TRAJECTORY_w['particle'].append(pose)
-        #x_m, y_m = transformation.worldToMap(MAP, TRAJECTORY_w['particle'][i][0], TRAJECTORY_w['particle'][i][1])
-        #TRAJECTORY_m['particle'].append(np.array([x_m, y_m, pose[2]]))
+        TRAJECTORY_w['particle'].append(pose)
+        p_x_m, p_y_m = transformation.worldToMap(MAP, TRAJECTORY_w['particle'][i][0], TRAJECTORY_w['particle'][i][1])
+        TRAJECTORY_m['particle'].append(np.array([p_x_m, p_y_m, pose[2]]))
         
         # update map based on particle's view of lidar scan
-        #occupancy_grid_map.updateMap(MAP, x_w, y_w, pose[0], pose[1])
+        occupancy_grid_map.updateMap(MAP, x_w, y_w, pose[0], pose[1])
+        print(len(TRAJECTORY_m['particle'][0]))
 
-
-        #if i % 1000 == 0:
-        #    print(x_m)
-            #print(TRAJECTORY_m['odometry'][i][0], TRAJECTORY_m['odometry'][i][1])
+        if (i % 100 == 0 or i == len(lidar_range) - 1):
+            plt.imshow(MAP['plot'])
+            plt.scatter(np.asarray(TRAJECTORY_m['particle'])[:].T[0], np.asarray(TRAJECTORY_m['particle'])[:].T[1], c='r', marker="s", s=2)
+            plt.scatter(np.asarray(TRAJECTORY_m['odometry'])[:].T[0], np.asarray(TRAJECTORY_m['odometry'])[:].T[1], c='b', marker="s", s=2)
+            plt.title(" trajectory after " + str(i) + " scans")
+            filename = "results/trajectory/s" + str(i) + "p" + str(5) + ".png"
+            plt.savefig(filename, dpi=300, bbox_inches='tight')                
+            
+            plt.imshow(MAP['map'])
+            plt.title(" log-odds after " + str(i) + " scans")
+            filename = "results/log-odds/lo-d" + "s" + str(i) + "p" + str(5) + ".png"
+            plt.savefig(filename, dpi=300, bbox_inches='tight')                
+            
+            #print("occupancy grid and log-odds at scan =", i + 1, "of", len(lidar_range))
+            #print("current particle position:", TRAJECTORY_m['particle'][i].T[0][0], ",", TRAJECTORY_m['particle'][i].T[1][0])
+            #print("current odometry position:", TRAJECTORY_m['odometry'][i].T[0][0], ",", TRAJECTORY_m['odometry'][i].T[1][0])        
 
     traj_x_m = []
     traj_y_m = []

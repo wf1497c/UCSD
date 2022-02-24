@@ -57,9 +57,6 @@ def updateMap(MAP, x_w, y_w, x_cur, y_cur):
     
     # transform particles positions into map coordinates
     x_cur_m, y_cur_m = transformation.worldToMap(MAP, x_cur, y_cur)
-    #plt.imshow(MAP['plot'])
-    #plt.scatter(x_m, y_m, c='r', marker="s")
-    #plt.savefig('test.jpg')
     
     # check whether it's out of range of image size
     indvalid = np.logical_and(np.logical_and(np.logical_and((x_m > 1), (y_m > 1)), (x_m < MAP['sizex'])),(y_m < MAP['sizey']))
@@ -84,10 +81,6 @@ def updateMap(MAP, x_w, y_w, x_cur, y_cur):
         frees = bresenham2D(x_cur_m, y_cur_m, hit_x_m, hit_y_m)
         MAP['map'][frees[1,:].astype(int),frees[0,:].astype(int)] += MAP['free']
     
-    #MAP['map'] += free_grid 
-    #plt.imshow(free_grid)
-    #plt.savefig("free_grid")
-    
     # prevent overconfidence
     MAP['map'][MAP['map'] > MAP['confidence_limit']] = MAP['confidence_limit']
     MAP['map'][MAP['map'] < -MAP['confidence_limit']] = -MAP['confidence_limit']
@@ -95,14 +88,13 @@ def updateMap(MAP, x_w, y_w, x_cur, y_cur):
     # update plot
     occupied_grid = MAP['map'] > MAP['occupied_thresh']
     free_grid = MAP['map'] < MAP['free_thresh']
-    plt.imshow(free_grid)
-    plt.savefig("free_grid")
-    #plt.imshow(occupied_grid)
-    #plt.savefig("occupied_grid")
     
     MAP['plot'][occupied_grid] = [0, 0, 0]
     MAP['plot'][free_grid] = [255, 255, 255] 
     MAP['plot'][np.logical_and(np.logical_not(free_grid), np.logical_not(occupied_grid))] = [127, 127, 127]
+    #plt.imshow(MAP['plot'])
+    #plt.savefig('occupied_grid')
+    #plt.close()
     
-    x_m, y_m = transformation.worldToMap(MAP, x_w, y_w)
+    #x_m, y_m = transformation.worldToMap(MAP, x_w, y_w)
     MAP['plot'][y_m, x_m] = [255, 0, 0]    # plot latest lidar scan hits

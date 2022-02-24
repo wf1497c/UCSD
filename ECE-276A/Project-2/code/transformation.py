@@ -89,7 +89,6 @@ def lidarToWorld(x_l, y_l, x_cur, y_cur, yaw_cur): ###
     w_T_l = lidarToWorldTransform(x_cur,y_cur,yaw_cur)
     coordinates_l = np.vstack((np.vstack((x_l, y_l)), np.zeros((1, x_l.shape[1])), np.ones((1, x_l.shape[1]))))
     coordinates_w = w_T_l.dot(coordinates_l)
-    origin = w_T_l.dot(np.array([0,0,0,1]))
 
     x_w = coordinates_w[0, :]
     y_w = coordinates_w[1, :]
