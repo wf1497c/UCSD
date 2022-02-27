@@ -29,7 +29,7 @@ def vehicleToWorldTransform(x, y, yaw):
     
     return w_T_v
 
-def lidarToVehicleTransform(): # correct
+def lidarToVehicleTransform(): 
     '''
     Output:
         v_T_l: Transformation from lidar to vehicle frame
@@ -123,3 +123,37 @@ def worldToMap(MAP, x_w, y_w):
     #y_m = y_m[indGood]
     
     return x_m.astype(np.int), y_m.astype(np.int)
+
+def cameraToWorld(u,v):
+    '''
+    Input:
+        u, v: pixel coordinates in the image
+    Output:
+        v_T_l: Transformation from lidar to vehicle frame
+    '''
+    baseline = 0.475143600050775
+    projection_matrix = np.array([[7.7537235550066748e+02, 0., 6.1947309112548828e+02, 0.],
+                                [7.7537235550066748e+02, 2.5718049049377441e+02, 0.],
+                                [0., 0., 1.]
+                                ])
+    camera_matrix = np.array([[8.1690378992770002e+02, 5.0510166700000003e-01,6.0850726281690004e+02],
+                                [0., 8.1156803828490001e+02,2.6347599764440002e+02],
+                                [0., 0., 1.]
+                                ])
+    
+    v_R_c = np.array([[-0.00680499, -0.0153215, 0.99985],
+                    [-0.999977, 0.000334627, -0.00680066],
+                    [-0.000230383, -0.999883, -0.0153234]])
+    #w_R_v = vehicleToWorldTransform(x, y, yaw)
+    
+    M = np.vstack([camera_matrix[:2,:], camera_matrix[:2,:]])
+    M = np.hstack([M, np.array([[0,0,-camera_matrix[0,0]*baseline,0],]).T])
+    #M = np.vstack([camera_matrix[:2,:], np.ones([1,3])])
+    #M = np.hstack([M, np.array([[0,0,camera_matrix[0,0]*baseline],]).T])
+    #M_inv = np.linalg.inv(M)
+    #test_p_uv = np.array([[20,20,baseline],]).T
+    #test_vec = M_inv.dot(test_p_uv)
+
+    #print(test_vec)
+
+#cameraToWorld(0,0)

@@ -148,16 +148,22 @@ class getData():
         TRAJECTORY_w = {}
         TRAJECTORY_w['particle'] = []
         TRAJECTORY_w['odometry'] = []
+        TRAJECTORY_w['leftcamera'] = []
         
         TRAJECTORY_m = {}
         TRAJECTORY_m['particle'] = []
         TRAJECTORY_m['odometry'] = []
+        TRAJECTORY_m['leftcamera'] = []
         return MAP, particles, TRAJECTORY_w, TRAJECTORY_m
 
 if __name__ == '__main__':
     data = getData()
     MAP, particles, TRAJECTORY_w, TRAJECTORY_m = data.initializeSLAM(2)
     time_all = 500
+
+    # relative distance of camera to vehicle are constant
+    p_x_lcam, p_y_lcam = 1.64239, 0.247401 
+    theta_cam = math.atan(p_y_lcam / p_x_lcam)
 
     for i in range(time_all):#len(data.lidar_data)):
         lidar_range = data.lidar_data[i, :]
@@ -178,6 +184,12 @@ if __name__ == '__main__':
             TRAJECTORY_w['particle'].append(pose)
             x_m, y_m = transformation.worldToMap(MAP, TRAJECTORY_w['particle'][i][0], TRAJECTORY_w['particle'][i][1])
             TRAJECTORY_m['particle'].append(np.array([x_m, y_m, pose[2]]))
+            
+            x_cam_w, y_cam_w = TRAJECTORY_w['particle'][i][0] + math.cos(pose[2] - theta_cam), TRAJECTORY_w['particle'][i][1] + math.sin(pose[2] - theta_cam)
+            #x_cam_w, y_cam_w = transformation.VehicleToLCamera(TRAJECTORY_w['particle'][i][0], TRAJECTORY_w['particle'][i][1])
+            TRAJECTORY_w['leftcamera'].append(np.array([x_cam_w, y_cam_w, pose[2]]))
+            x_cam_m, y_cam_m = transformation.worldToMap(MAP, x_cam_w, y_cam_w)
+            TRAJECTORY_m['leftcamera'].append(np.array([x_cam_m, y_cam_m, pose[2]]))
 
             # trajectory of IMU
             TRAJECTORY_w['odometry'].append(delta_pose)
@@ -209,15 +221,22 @@ if __name__ == '__main__':
         TRAJECTORY_w['particle'].append(pose)
         p_x_m, p_y_m = transformation.worldToMap(MAP, TRAJECTORY_w['particle'][i][0], TRAJECTORY_w['particle'][i][1])
         TRAJECTORY_m['particle'].append(np.array([p_x_m, p_y_m, pose[2]]))
+
+        # update left camera trajectories again
+        x_cam_w, y_cam_w = TRAJECTORY_w['particle'][i][0] + math.cos(pose[2] - theta_cam), TRAJECTORY_w['particle'][i][1] + math.sin(pose[2] - theta_cam)
+        TRAJECTORY_w['leftcamera'].append(np.array([x_cam_w, y_cam_w, pose[2]]))
+        x_cam_m, y_cam_m = transformation.worldToMap(MAP, x_cam_w, y_cam_w)
+        TRAJECTORY_m['leftcamera'].append(np.array([x_cam_m, y_cam_m, pose[2]]))
         
         # update map based on particle's view of lidar scan
         occupancy_grid_map.updateMap(MAP, x_w, y_w, pose[0], pose[1])
         print(len(TRAJECTORY_m['particle'][0]))
 
-        if (i % 100 == 0 or i == len(lidar_range) - 1):
+        if (i % 50 == 0 or i == len(lidar_range) - 1):
             plt.imshow(MAP['plot'])
             plt.scatter(np.asarray(TRAJECTORY_m['particle'])[:].T[0], np.asarray(TRAJECTORY_m['particle'])[:].T[1], c='r', marker="s", s=2)
             plt.scatter(np.asarray(TRAJECTORY_m['odometry'])[:].T[0], np.asarray(TRAJECTORY_m['odometry'])[:].T[1], c='b', marker="s", s=2)
+            plt.scatter(np.asarray(TRAJECTORY_m['leftcamera'])[:].T[0], np.asarray(TRAJECTORY_m['leftcamera'])[:].T[1], c='g', marker="s", s=2)
             plt.title(" trajectory after " + str(i) + " scans")
             filename = "results/trajectory/s" + str(i) + "p" + str(5) + ".png"
             plt.savefig(filename, dpi=300, bbox_inches='tight')                

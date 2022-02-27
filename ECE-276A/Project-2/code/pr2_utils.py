@@ -12,9 +12,9 @@ def tic():
 def toc(tstart, name="Operation"):
   print('%s took: %s sec.\n' % (name,(time.time() - tstart)))
 
-def compute_stereo():
-  path_l = 'data/image_left.png'
-  path_r = 'data/image_right.png'
+def compute_stereo(path_l, path_r):
+  #path_l = 'code/data/image_left.png'
+  #path_r = 'code/data/image_right.png'
 
   image_l = cv2.imread(path_l, 0)
   image_r = cv2.imread(path_r, 0)
@@ -28,6 +28,7 @@ def compute_stereo():
   # You may need to fine-tune the variables `numDisparities` and `blockSize` based on the desired accuracy
   stereo = cv2.StereoBM_create(numDisparities=32, blockSize=9) 
   disparity = stereo.compute(image_l_gray, image_r_gray)
+  print(np.sum(disparity>100))
 
   fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
   ax1.imshow(image_l)
@@ -37,6 +38,9 @@ def compute_stereo():
   ax3.imshow(disparity, cmap='gray')
   ax3.set_title('Disparity Map')
   plt.show()
+  plt.savefig('Disparity Map')
+
+  return disparity
   
 
 def read_data_from_csv(filename):
@@ -267,8 +271,10 @@ def show_lidar():
 	
 
 if __name__ == '__main__':
-  #compute_stereo()
+  path_l = 'code/data/image_left.png'
+  path_r = 'code/data/image_right.png'
+  compute_stereo(path_l, path_r)
   #show_lidar()
-  test_mapCorrelation()
+  #test_mapCorrelation()
   #test_bresenham2D()
   

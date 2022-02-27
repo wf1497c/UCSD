@@ -79,6 +79,12 @@ def updateMap(MAP, x_w, y_w, x_cur, y_cur):
     for i in range(contours.shape[1]):
         hit_x_m, hit_y_m = x_m[i], y_m[i]
         frees = bresenham2D(x_cur_m, y_cur_m, hit_x_m, hit_y_m)
+
+        # prevent out-of-range error. make sure all lidar paths are within map
+        indvalid = np.logical_and(np.logical_and(np.logical_and((frees[0,:] > 1), (frees[1,:] > 1)),
+         (frees[0,:] < MAP['sizex'])),(frees[1,:] < MAP['sizey'])) 
+        frees = frees[:,indvalid]
+
         MAP['map'][frees[1,:].astype(int),frees[0,:].astype(int)] += MAP['free']
     
     # prevent overconfidence
