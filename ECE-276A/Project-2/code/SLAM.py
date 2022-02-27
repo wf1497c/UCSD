@@ -10,6 +10,7 @@ import math
 import transformation
 import particle
 import occupancy_grid_map
+from textureMapping import stereoModel
 
 class getData():
     def __init__(self):
@@ -160,6 +161,16 @@ if __name__ == '__main__':
     data = getData()
     MAP, particles, TRAJECTORY_w, TRAJECTORY_m = data.initializeSLAM(2)
     time_all = 500
+
+    s = stereoModel()
+    path_l = 'stereo_left/1544582648735466220.png'
+    path_r = 'stereo_right/1544582648735466220.png'
+    pixel_uv, pixel_xyz_w = s.imageToWorld(path_l, path_r, 300)
+    pixel_x_m, pixel_y_m = transformation.worldToMap(MAP, pixel_xyz_w[:,0], pixel_xyz_w[:,1])
+    #plt.imshow(MAP['plot'])
+    #plt.scatter(pixel_x_m, pixel_y_m)
+    plt.plot(pixel_x_m, pixel_y_m)
+    plt.savefig('test.jpg')
 
     # relative distance of camera to vehicle are constant
     p_x_lcam, p_y_lcam = 1.64239, 0.247401 

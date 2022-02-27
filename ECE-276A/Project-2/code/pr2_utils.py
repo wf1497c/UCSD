@@ -30,15 +30,15 @@ def compute_stereo(path_l, path_r):
   disparity = stereo.compute(image_l_gray, image_r_gray)
   print(np.sum(disparity>100))
 
-  fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
-  ax1.imshow(image_l)
-  ax1.set_title('Left Image')
-  ax2.imshow(image_r)
-  ax2.set_title('Right Image')
-  ax3.imshow(disparity, cmap='gray')
-  ax3.set_title('Disparity Map')
-  plt.show()
-  plt.savefig('Disparity Map')
+  #fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
+  #ax1.imshow(image_l)
+  #ax1.set_title('Left Image')
+  #ax2.imshow(image_r)
+  #ax2.set_title('Right Image')
+  #ax3.imshow(disparity, cmap='gray')
+  #ax3.set_title('Disparity Map')
+  #plt.show()
+  #plt.savefig('Disparity Map')
 
   return disparity
   
