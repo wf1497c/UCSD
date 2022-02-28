@@ -160,7 +160,7 @@ class getData():
 if __name__ == '__main__':
     data = getData()
     MAP, particles, TRAJECTORY_w, TRAJECTORY_m = data.initializeSLAM(2)
-    time_all = 500
+    time_all = 10000
 
     s = stereoModel()
     path_l = 'stereo_left/1544582648735466220.png'
