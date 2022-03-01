@@ -55,7 +55,7 @@ def updateParticles(PARTICLES, MAP, x_l, y_l, TRAJECTORY_m, init=False):
         cur_x_m, cur_y_m = 200-1, 200-1
 
     plot = MAP['plot']
-    plot = plot[cur_x_m-150+1:cur_x_m+800+1,cur_y_m-150+1:cur_y_m+800+1,:]
+    plot = plot[cur_x_m-150:cur_x_m+800,cur_y_m-150:cur_y_m+800,:] ######
     _, plot = cv2.threshold(MAP['plot'], 127, 255, cv2.THRESH_BINARY) ####### slow
 
     map_shape = plot.shape

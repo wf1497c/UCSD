@@ -39,7 +39,7 @@ def initializeMap(res, xmin, ymin, xmax, ymax, trust = None, optimism = None, oc
     MAP['occupied_thresh'] = np.log(occupied_thresh / (1 - occupied_thresh))
     MAP['free_thresh'] = np.log(free_thresh / (1 - free_thresh))
     (h, w) = MAP['map'].shape
-    MAP['plot'] = np.zeros((h, w, 3), np.uint8) 
+    MAP['plot'] = np.ones((h, w, 3), np.uint8) * 127
     
     return MAP 
 
@@ -57,7 +57,6 @@ def updateMap(MAP, x_w, y_w, x_cur, y_cur):
     x_cur_m, y_cur_m = transformation.worldToMap(MAP, x_cur, y_cur)
     
     # check whether it's out of range of image size
-    start_time = time()
     indvalid = np.logical_and(np.logical_and(np.logical_and((x_m > 1), (y_m > 1)), (x_m < MAP['sizex'])),(y_m < MAP['sizey']))
     x_m = x_m[indvalid]
     y_m = y_m[indvalid]
@@ -73,11 +72,10 @@ def updateMap(MAP, x_w, y_w, x_cur, y_cur):
     x_m = np.append(x_m, x_cur_m) # Must consider robot's current cell
     y_m = np.append(y_m, y_cur_m)
     contours = np.vstack((x_m, y_m)) # SWITCH
-    
-    
 
     # find the cells that are free, and update the map
     #cv2.drawContours(free_grid, [contours.T], -1, MAP['free'], -1) 
+    
     for i in range(contours.shape[1]):
         hit_x_m, hit_y_m = x_m[i], y_m[i]
         frees = bresenham2D(x_cur_m, y_cur_m, hit_x_m, hit_y_m)
@@ -88,24 +86,28 @@ def updateMap(MAP, x_w, y_w, x_cur, y_cur):
 
         MAP['map'][frees[1,:].astype(int),frees[0,:].astype(int)] += MAP['free']
     
-    
     # prevent overconfidence
-    MAP['map'][MAP['map'] > MAP['confidence_limit']] = MAP['confidence_limit']
-    MAP['map'][MAP['map'] < -MAP['confidence_limit']] = -MAP['confidence_limit']
+    start_time = time()
+    #MAP['map'][MAP['map'] > MAP['confidence_limit']] = MAP['confidence_limit']
+    #MAP['map'][MAP['map'] < -MAP['confidence_limit']] = -MAP['confidence_limit']
+    #
     
     # update plot
-    occupied_grid = MAP['map'] > 0#MAP['occupied_thresh']
-    free_grid = MAP['map'] < 0#MAP['free_thresh']
+    occupied_grid = MAP['map'][0:x_cur_m+800,0:x_cur_m+800] > 0#MAP['occupied_thresh']
+    free_grid = MAP['map'][0:x_cur_m+800,0:x_cur_m+800] < 0#MAP['free_thresh']
+    MAP['plot'][0:x_cur_m+800,0:x_cur_m+800][occupied_grid] = [0, 0, 0]
+    MAP['plot'][0:x_cur_m+800,0:x_cur_m+800][free_grid] = [255, 255, 255] 
     
-    
-    MAP['plot'][occupied_grid] = [0, 0, 0]
-    MAP['plot'][free_grid] = [255, 255, 255] 
+    #MAP['plot'][occupied_grid] = [0, 0, 0]
+    #MAP['plot'][free_grid] = [255, 255, 255] 
+    MAP['plot'][y_m, x_m] = [255, 0, 0] # plot latest lidar scan hits
     print(time()-start_time)
-    MAP['plot'][np.logical_and(np.logical_not(free_grid), np.logical_not(occupied_grid))] = [127, 127, 127]
+    
+    #MAP['plot'][np.logical_and(np.logical_not(free_grid), np.logical_not(occupied_grid))] = [127, 127, 127]
+    
     #plt.imshow(MAP['plot'])
     #plt.savefig('occupied_grid')
     #plt.close()
     
     #x_m, y_m = transformation.worldToMap(MAP, x_w, y_w)
-    MAP['plot'][y_m, x_m] = [255, 0, 0]    # plot latest lidar scan hits
     
