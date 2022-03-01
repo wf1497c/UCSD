@@ -87,7 +87,7 @@ def updateMap(MAP, x_w, y_w, x_cur, y_cur):
         MAP['map'][frees[1,:].astype(int),frees[0,:].astype(int)] += MAP['free']
     
     # prevent overconfidence
-    start_time = time()
+    #start_time = time()
     #MAP['map'][MAP['map'] > MAP['confidence_limit']] = MAP['confidence_limit']
     #MAP['map'][MAP['map'] < -MAP['confidence_limit']] = -MAP['confidence_limit']
     #
@@ -101,7 +101,6 @@ def updateMap(MAP, x_w, y_w, x_cur, y_cur):
     #MAP['plot'][occupied_grid] = [0, 0, 0]
     #MAP['plot'][free_grid] = [255, 255, 255] 
     MAP['plot'][y_m, x_m] = [255, 0, 0] # plot latest lidar scan hits
-    print(time()-start_time)
     
     #MAP['plot'][np.logical_and(np.logical_not(free_grid), np.logical_not(occupied_grid))] = [127, 127, 127]
     

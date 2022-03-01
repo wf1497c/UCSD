@@ -224,23 +224,25 @@ if __name__ == '__main__':
             plt.savefig('map.png')
 
         # particle filter steps. Resample is called in the updateParticles() function
-        
         particle.predictParticles(particles, delta_pose[0], delta_pose[1], delta_pose[2], pose[0], pose[1], pose[2])
-        
-        
+        #start_time = time()
         if i == 0:
             particle.updateParticles(particles, MAP, x_l, y_l, TRAJECTORY_m, True)
         else:
             particle.updateParticles(particles, MAP, x_l, y_l, TRAJECTORY_m)
-        
+        #print(time()-start_time)
 
         print("Timestep:" + str(i+1) + "/" + str(time_all))
         # update trajectories again
+        
         pose = particles['poses'][np.argmax(particles['weights']), :]
+        
             
         TRAJECTORY_w['particle'].append(pose)
         p_x_m, p_y_m = transformation.worldToMap(MAP, TRAJECTORY_w['particle'][i][0], TRAJECTORY_w['particle'][i][1])
+        
         TRAJECTORY_m['particle'].append(np.array([p_x_m, p_y_m, pose[2]]))
+        
 
         # update left camera trajectories again
         x_cam_w, y_cam_w = TRAJECTORY_w['particle'][i][0] + math.cos(pose[2] - theta_cam), TRAJECTORY_w['particle'][i][1] + math.sin(pose[2] - theta_cam)
@@ -253,7 +255,7 @@ if __name__ == '__main__':
         occupancy_grid_map.updateMap(MAP, x_w, y_w, pose[0], pose[1])
         #print(time()-start_time)
 
-        if (i % 400 == 399): #or i == len(lidar_range) - 1):
+        if (i % 400 == 0): #or i == len(lidar_range) - 1):
             map_plot = MAP['plot']
             plt.imshow(MAP['plot'])
             particle_x = np.asarray(TRAJECTORY_m['particle'])[:].T[0]
@@ -263,14 +265,19 @@ if __name__ == '__main__':
             plt.scatter(particle_x, particle_y, c='r', marker="s", s=2)
             plt.scatter(odo_x, odo_y, c='b', marker="s", s=2)
             #plt.scatter(np.asarray(TRAJECTORY_m['leftcamera'])[:].T[0], np.asarray(TRAJECTORY_m['leftcamera'])[:].T[1], c='g', marker="s", s=2)
-            plt.title(" trajectory after " + str(i) + " scans")
-            filename = "results/trajectory/s" + str(i) + "p" + str(5) + ".png"
+            plt.title(" trajectory after " + str(i+1) + " scans")
+            filename = "results/trajectory/s" + str(i+1) + "p" + str(5) + ".png"
             plt.savefig(filename, dpi=300, bbox_inches='tight')                
             
-            plt.imshow(MAP['map'])
-            plt.title(" log-odds after " + str(i) + " scans")
-            filename = "results/log-odds/lo-d" + "s" + str(i) + "p" + str(5) + ".png"
+            plt.figure()
+            norm_map = cv2.normalize(MAP['map'], None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+            color_map = plt.imshow(norm_map)
+            color_map.set_cmap("Blues_r")
+            #plt.title(" log-odds after " + str(i+1) + " scans")
+            plt.colorbar(color_map)
+            filename = "results/log-odds/lo-d" + "s" + str(i+1) + "p" + str(5) + ".png"
             plt.savefig(filename, dpi=300, bbox_inches='tight')        
+            
             
             #print("occupancy grid and log-odds at scan =", i + 1, "of", len(lidar_range))
             #print("current particle position:", TRAJECTORY_m['particle'][i].T[0][0], ",", TRAJECTORY_m['particle'][i].T[1][0])

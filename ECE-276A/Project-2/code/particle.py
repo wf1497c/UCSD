@@ -47,19 +47,20 @@ def updateParticles(PARTICLES, MAP, x_l, y_l, TRAJECTORY_m, init=False):
     
     correlations = np.zeros(PARTICLES['num'])
 
-    #start_time = time()
-
     if init == False:
         cur_x_m, cur_y_m = int(TRAJECTORY_m['particle'][-1][0]), int(TRAJECTORY_m['particle'][-1][0])
     else:
         cur_x_m, cur_y_m = 200-1, 200-1
 
+    
     plot = MAP['plot']
     plot = plot[cur_x_m-150:cur_x_m+800,cur_y_m-150:cur_y_m+800,:] ######
-    _, plot = cv2.threshold(MAP['plot'], 127, 255, cv2.THRESH_BINARY) ####### slow
+    
+    _, plot = cv2.threshold(plot, 127, 255, cv2.THRESH_BINARY) ####### slow
 
     map_shape = plot.shape
     particle_plot = np.zeros(map_shape)
+    
     
     
     for i in range(PARTICLES['num']):
@@ -70,10 +71,12 @@ def updateParticles(PARTICLES, MAP, x_l, y_l, TRAJECTORY_m, init=False):
         x_m, y_m = x_m[indvalid], y_m[indvalid]
         
         particle_plot[y_m-cur_y_m+150, x_m-cur_x_m+150] = [0,1,0]
+        start_time = time()
         correlations[i] = np.sum(np.logical_and(plot, particle_plot)) # switched x and y # too slow
+        print(time()-start_time)
         particle_plot[y_m-cur_y_m+150, x_m-cur_x_m+150] = [0,0,0]
-        #print('update time:' + str(passed_time))
-    #print(time()-start_time)
+
+    
     
     weights = special.softmax(correlations - np.max(correlations)) # np.multiply(PARTICLES['weights'], scipy.special.softmax(correlations)) # multiply or add or replace?
 
