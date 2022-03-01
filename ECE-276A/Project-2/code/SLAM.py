@@ -11,6 +11,7 @@ import transformation
 import particle
 import occupancy_grid_map
 from textureMapping import stereoModel
+from time import time
 
 class getData():
     def __init__(self):
@@ -144,7 +145,7 @@ class getData():
 
 
     def initializeSLAM(self, num_particles):
-        MAP = occupancy_grid_map.initializeMap(0.1,-20,-20,200,200) # res, xmin, ymin, xmax, ymax
+        MAP = occupancy_grid_map.initializeMap(0.1,-20,-20,100,100) # res, xmin, ymin, xmax, ymax
         particles = particle.initializeParticles(num_particles)
         TRAJECTORY_w = {}
         TRAJECTORY_w['particle'] = []
@@ -165,7 +166,7 @@ if __name__ == '__main__':
     s = stereoModel()
     path_l = 'stereo_left/1544582648735466220.png'
     path_r = 'stereo_right/1544582648735466220.png'
-    pixel_uv, pixel_xyz_w = s.imageToWorld(path_l, path_r, 300)
+    pixel_uv, pixel_xyz_w = s.imageToWorld(path_l, path_r, 5)
     pixel_x_m, pixel_y_m = transformation.worldToMap(MAP, pixel_xyz_w[:,0], pixel_xyz_w[:,1])
     #plt.imshow(MAP['plot'])
     #plt.scatter(pixel_x_m, pixel_y_m)
@@ -175,6 +176,7 @@ if __name__ == '__main__':
     # relative distance of camera to vehicle are constant
     p_x_lcam, p_y_lcam = 1.64239, 0.247401 
     theta_cam = math.atan(p_y_lcam / p_x_lcam)
+    print(data.delta_pose[:,1000], data.delta_pose[:,200])
 
     for i in range(time_all):#len(data.lidar_data)):
         lidar_range = data.lidar_data[i, :]
@@ -188,7 +190,7 @@ if __name__ == '__main__':
 
         # Record trajectories
         delta_pose = data.delta_pose[:,i]
-
+        
         if (i == 0):
             pose = particles['poses'][np.argmax(particles['weights']), :]
             
@@ -222,8 +224,15 @@ if __name__ == '__main__':
             plt.savefig('map.png')
 
         # particle filter steps. Resample is called in the updateParticles() function
+        
         particle.predictParticles(particles, delta_pose[0], delta_pose[1], delta_pose[2], pose[0], pose[1], pose[2])
-        particle.updateParticles(particles, MAP, x_l, y_l)
+        
+        
+        if i == 0:
+            particle.updateParticles(particles, MAP, x_l, y_l, TRAJECTORY_m, True)
+        else:
+            particle.updateParticles(particles, MAP, x_l, y_l, TRAJECTORY_m)
+        
 
         print("Timestep:" + str(i+1) + "/" + str(time_all))
         # update trajectories again
@@ -240,14 +249,20 @@ if __name__ == '__main__':
         TRAJECTORY_m['leftcamera'].append(np.array([x_cam_m, y_cam_m, pose[2]]))
         
         # update map based on particle's view of lidar scan
+        #start_time = time()
         occupancy_grid_map.updateMap(MAP, x_w, y_w, pose[0], pose[1])
-        print(len(TRAJECTORY_m['particle'][0]))
+        #print(time()-start_time)
 
-        if (i % 50 == 0 or i == len(lidar_range) - 1):
+        if (i % 400 == 399): #or i == len(lidar_range) - 1):
+            map_plot = MAP['plot']
             plt.imshow(MAP['plot'])
-            plt.scatter(np.asarray(TRAJECTORY_m['particle'])[:].T[0], np.asarray(TRAJECTORY_m['particle'])[:].T[1], c='r', marker="s", s=2)
-            plt.scatter(np.asarray(TRAJECTORY_m['odometry'])[:].T[0], np.asarray(TRAJECTORY_m['odometry'])[:].T[1], c='b', marker="s", s=2)
-            plt.scatter(np.asarray(TRAJECTORY_m['leftcamera'])[:].T[0], np.asarray(TRAJECTORY_m['leftcamera'])[:].T[1], c='g', marker="s", s=2)
+            particle_x = np.asarray(TRAJECTORY_m['particle'])[:].T[0]
+            particle_y = np.asarray(TRAJECTORY_m['particle'])[:].T[1]
+            odo_x = np.asarray(TRAJECTORY_m['odometry'])[:].T[0]
+            odo_y = np.asarray(TRAJECTORY_m['odometry'])[:].T[1]
+            plt.scatter(particle_x, particle_y, c='r', marker="s", s=2)
+            plt.scatter(odo_x, odo_y, c='b', marker="s", s=2)
+            #plt.scatter(np.asarray(TRAJECTORY_m['leftcamera'])[:].T[0], np.asarray(TRAJECTORY_m['leftcamera'])[:].T[1], c='g', marker="s", s=2)
             plt.title(" trajectory after " + str(i) + " scans")
             filename = "results/trajectory/s" + str(i) + "p" + str(5) + ".png"
             plt.savefig(filename, dpi=300, bbox_inches='tight')                
@@ -255,7 +270,7 @@ if __name__ == '__main__':
             plt.imshow(MAP['map'])
             plt.title(" log-odds after " + str(i) + " scans")
             filename = "results/log-odds/lo-d" + "s" + str(i) + "p" + str(5) + ".png"
-            plt.savefig(filename, dpi=300, bbox_inches='tight')                
+            plt.savefig(filename, dpi=300, bbox_inches='tight')        
             
             #print("occupancy grid and log-odds at scan =", i + 1, "of", len(lidar_range))
             #print("current particle position:", TRAJECTORY_m['particle'][i].T[0][0], ",", TRAJECTORY_m['particle'][i].T[1][0])

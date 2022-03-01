@@ -1,11 +1,9 @@
 import numpy as np
 import cv2
-import os
-import pandas as pd
-import matplotlib.pyplot as plt
 from pr2_utils import read_data_from_csv
 from scipy import special
 import transformation
+from time import time
 
 def initializeParticles(num = None, n_thresh = None, noise_cov = None):
     if num == None:
@@ -29,8 +27,7 @@ def initializeParticles(num = None, n_thresh = None, noise_cov = None):
     return PARTICLES
 
 def predictParticles(PARTICLES, d_x, d_y, d_yaw, x_prev, y_prev, yaw_prev):
-    
-    noise_cov =  np.matmul(PARTICLES['noise_cov'], np.abs(np.array([[d_x, 0, 0], [0, d_y, 0], [0, 0, d_yaw]]))) 
+    noise_cov =  np.matmul(PARTICLES['noise_cov'], np.abs(np.array([[0.015,0,0],[0,0.015,0],[0,0,0.5]])))#[[d_x, 0, 0], [0, d_y, 0], [0, 0, d_yaw]]))) 
         
     # create hypothesis (particles) poses
     noise = np.random.multivariate_normal([0, 0, 0], noise_cov, PARTICLES['num'])
@@ -40,7 +37,7 @@ def predictParticles(PARTICLES, d_x, d_y, d_yaw, x_prev, y_prev, yaw_prev):
     PARTICLES['poses'] += np.array([[d_x, d_y, d_yaw]])
     return
 
-def updateParticles(PARTICLES, MAP, x_l, y_l):
+def updateParticles(PARTICLES, MAP, x_l, y_l, TRAJECTORY_m, init=False):
     
     n_eff = 1 / np.sum(np.square(PARTICLES['weights']))
     
@@ -49,17 +46,34 @@ def updateParticles(PARTICLES, MAP, x_l, y_l):
         resampleParticles(PARTICLES)
     
     correlations = np.zeros(PARTICLES['num'])
+
+    #start_time = time()
+
+    if init == False:
+        cur_x_m, cur_y_m = int(TRAJECTORY_m['particle'][-1][0]), int(TRAJECTORY_m['particle'][-1][0])
+    else:
+        cur_x_m, cur_y_m = 200-1, 200-1
+
+    plot = MAP['plot']
+    plot = plot[cur_x_m-150+1:cur_x_m+800+1,cur_y_m-150+1:cur_y_m+800+1,:]
+    _, plot = cv2.threshold(MAP['plot'], 127, 255, cv2.THRESH_BINARY) ####### slow
+
+    map_shape = plot.shape
+    particle_plot = np.zeros(map_shape)
     
-    _, plot = cv2.threshold(MAP['plot'], 127, 255, cv2.THRESH_BINARY)
     
     for i in range(PARTICLES['num']):
         x_w, y_w, _ = transformation.lidarToWorld(x_l, y_l, PARTICLES['poses'][i][0], PARTICLES['poses'][i][1], PARTICLES['poses'][i][2])        
         x_m, y_m = transformation.worldToMap(MAP, x_w, y_w)
-        
-        particle_plot = np.zeros(MAP['plot'].shape)
-        particle_plot[y_m, x_m] = [0, 1, 0]
 
-        correlations[i] = np.sum(np.logical_and(plot, particle_plot)) # switched x and y
+        indvalid = np.logical_and(np.logical_and(np.logical_and((x_m > 1), (y_m > 1)), (x_m < MAP['sizex'])),(y_m < MAP['sizey']))
+        x_m, y_m = x_m[indvalid], y_m[indvalid]
+        
+        particle_plot[y_m-cur_y_m+150, x_m-cur_x_m+150] = [0,1,0]
+        correlations[i] = np.sum(np.logical_and(plot, particle_plot)) # switched x and y # too slow
+        particle_plot[y_m-cur_y_m+150, x_m-cur_x_m+150] = [0,0,0]
+        #print('update time:' + str(passed_time))
+    #print(time()-start_time)
     
     weights = special.softmax(correlations - np.max(correlations)) # np.multiply(PARTICLES['weights'], scipy.special.softmax(correlations)) # multiply or add or replace?
 
