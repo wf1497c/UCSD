@@ -145,7 +145,7 @@ class getData():
 
 
     def initializeSLAM(self, num_particles):
-        MAP = occupancy_grid_map.initializeMap(0.1,-20,-20,1400,1400) # res, xmin, ymin, xmax, ymax
+        MAP = occupancy_grid_map.initializeMap(0.1,-20,-20,100,100) # res, xmin, ymin, xmax, ymax
         particles = particle.initializeParticles(num_particles)
         TRAJECTORY_w = {}
         TRAJECTORY_w['particle'] = []
@@ -166,12 +166,6 @@ if __name__ == '__main__':
     s = stereoModel()
     path_l = 'stereo_left/1544582648735466220.png'
     path_r = 'stereo_right/1544582648735466220.png'
-    pixel_uv, pixel_xyz_w = s.imageToWorld(path_l, path_r, 5)
-    pixel_x_m, pixel_y_m = transformation.worldToMap(MAP, pixel_xyz_w[:,0], pixel_xyz_w[:,1])
-    #plt.imshow(MAP['plot'])
-    #plt.scatter(pixel_x_m, pixel_y_m)
-    plt.plot(pixel_x_m, pixel_y_m)
-    plt.savefig('test.jpg')
 
     # relative distance of camera to vehicle are constant
     p_x_lcam, p_y_lcam = 1.64239, 0.247401 
@@ -236,7 +230,6 @@ if __name__ == '__main__':
         
         pose = particles['poses'][np.argmax(particles['weights']), :]
         
-            
         TRAJECTORY_w['particle'].append(pose)
         p_x_m, p_y_m = transformation.worldToMap(MAP, TRAJECTORY_w['particle'][i][0], TRAJECTORY_w['particle'][i][1])
         

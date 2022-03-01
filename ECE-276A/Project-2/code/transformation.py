@@ -124,36 +124,51 @@ def worldToMap(MAP, x_w, y_w):
     
     return x_m.astype(np.int), y_m.astype(np.int)
 
-def cameraToWorld(u,v):
+def opticalToWorldTransform(x_cur,y_cur,yaw_cur):
     '''
     Input:
-        u, v: pixel coordinates in the image
+        x_cur,y_cur,yaw_cur: pose of the vehicle in world frame
     Output:
         v_T_l: Transformation from lidar to vehicle frame
     '''
-    baseline = 0.475143600050775
-    projection_matrix = np.array([[7.7537235550066748e+02, 0., 6.1947309112548828e+02, 0.],
-                                [7.7537235550066748e+02, 2.5718049049377441e+02, 0.],
-                                [0., 0., 1.]
-                                ])
-    camera_matrix = np.array([[8.1690378992770002e+02, 5.0510166700000003e-01,6.0850726281690004e+02],
-                                [0., 8.1156803828490001e+02,2.6347599764440002e+02],
-                                [0., 0., 1.]
-                                ])
-    
-    v_R_c = np.array([[-0.00680499, -0.0153215, 0.99985],
+    w_T_v = vehicleToWorldTransform(x_cur,y_cur,yaw_cur)
+    o_p_v = np.array([[1.64239, 0.247401, 1.58411, 1]])
+    o_R_v = np.array([[-0.00680499, -0.0153215, 0.99985],
                     [-0.999977, 0.000334627, -0.00680066],
-                    [-0.000230383, -0.999883, -0.0153234]])
-    #w_R_v = vehicleToWorldTransform(x, y, yaw)
-    
-    M = np.vstack([camera_matrix[:2,:], camera_matrix[:2,:]])
-    M = np.hstack([M, np.array([[0,0,-camera_matrix[0,0]*baseline,0],]).T])
-    #M = np.vstack([camera_matrix[:2,:], np.ones([1,3])])
-    #M = np.hstack([M, np.array([[0,0,camera_matrix[0,0]*baseline],]).T])
-    #M_inv = np.linalg.inv(M)
-    #test_p_uv = np.array([[20,20,baseline],]).T
-    #test_vec = M_inv.dot(test_p_uv)
+                    [-0.000230383, -0.999883, -0.0153234]]) # extrinsic
+    v_T_o = np.vstack([o_R_v, np.zeros(3)])
+    v_T_o = np.hstack([v_T_o, o_p_v.T])
+    w_T_o = w_T_v.dot(v_T_o)
 
-    #print(test_vec)
+    return w_T_o
+
+def opticalToWorld(x_o, y_o, x_cur, y_cur, yaw_cur): ###
+    '''
+    Input:
+        x_o, y_o: coordinates in optical frame
+        x_cur, y_cur: vehicle's coordinate in world frame
+        yaw_cur: vehicle's yaw angle
+    Output: 
+        x_w, y_w: point (x_o,y_o) in world frame
+    '''
+    w_T_o = opticalToWorldTransform(x_cur,y_cur,yaw_cur)
+    coordinates_l = np.vstack((np.vstack((x_o, y_o)), np.zeros((1, len(x_o))), np.ones((1, len(x_o)))))
+    coordinates_w = w_T_o.dot(coordinates_l)
+
+    x_w = coordinates_w[0, :]
+    y_w = coordinates_w[1, :]
+    z_w = coordinates_w[2, :]
+    
+    x_w = x_w[:, np.newaxis]
+    y_w = y_w[:, np.newaxis]
+    z_w = z_w[:, np.newaxis]
+    
+    # remove scans that are too close to the ground
+    indValid = (z_w > 0.1)
+    x_w = x_w[indValid]
+    y_w = y_w[indValid]
+    z_w = z_w[indValid]
+
+    return (x_w, y_w, z_w)
 
 #cameraToWorld(0,0)
