@@ -54,7 +54,10 @@ def updateParticles(PARTICLES, MAP, x_l, y_l, TRAJECTORY_m, init=False):
 
     
     plot = MAP['plot']
-    plot = plot[cur_x_m-150:cur_x_m+800,cur_y_m-150:cur_y_m+800,:] ######
+    if cur_x_m < 800:
+        plot = plot[cur_x_m-150:cur_x_m+800,cur_y_m-150:cur_y_m+800,:] ######
+    else:
+        plot = plot[cur_x_m-800:cur_x_m+800,cur_y_m-800:cur_y_m+800,:]
     
     _, plot = cv2.threshold(plot, 127, 255, cv2.THRESH_BINARY) ####### slow
 
@@ -68,15 +71,20 @@ def updateParticles(PARTICLES, MAP, x_l, y_l, TRAJECTORY_m, init=False):
         x_m, y_m = transformation.worldToMap(MAP, x_w, y_w)
 
         indvalid = np.logical_and(np.logical_and(np.logical_and((x_m > 1), (y_m > 1)), (x_m < MAP['sizex'])),(y_m < MAP['sizey']))
-        x_m, y_m = x_m[indvalid], y_m[indvalid]
-        
-        particle_plot[y_m-cur_y_m+150, x_m-cur_x_m+150] = [0,1,0]
-        start_time = time()
-        correlations[i] = np.sum(np.logical_and(plot, particle_plot)) # switched x and y # too slow
-        print(time()-start_time)
-        particle_plot[y_m-cur_y_m+150, x_m-cur_x_m+150] = [0,0,0]
-
-    
+        if cur_x_m < 800:
+            indvalid = np.logical_and(indvalid, np.logical_and(y_m-cur_y_m+150 < 950, x_m-cur_x_m+150 < 950))
+            indvalid = np.logical_and(indvalid, np.logical_and(y_m-cur_y_m+150 >=0, x_m-cur_x_m+150 >= 0))
+            x_m, y_m = x_m[indvalid], y_m[indvalid]
+            particle_plot[y_m-cur_y_m+150, x_m-cur_x_m+150] = [0,1,0]
+            correlations[i] = np.sum(np.logical_and(plot, particle_plot)) # switched x and y # too slow
+            particle_plot[y_m-cur_y_m+150, x_m-cur_x_m+150] = [0,0,0]
+        else:
+            indvalid = np.logical_and(indvalid, np.logical_and(y_m-cur_y_m+800 < 1600, x_m-cur_x_m+800 < 1600))
+            indvalid = np.logical_and(indvalid, np.logical_and(y_m-cur_y_m+800 >=0, x_m-cur_x_m+800 >= 0))
+            x_m, y_m = x_m[indvalid], y_m[indvalid]
+            particle_plot[y_m-cur_y_m+150, x_m-cur_x_m+150] = [0,1,0]
+            correlations[i] = np.sum(np.logical_and(plot, particle_plot)) # switched x and y # too slow
+            particle_plot[y_m-cur_y_m+800, x_m-cur_x_m+800] = [0,0,0]
     
     weights = special.softmax(correlations - np.max(correlations)) # np.multiply(PARTICLES['weights'], scipy.special.softmax(correlations)) # multiply or add or replace?
 

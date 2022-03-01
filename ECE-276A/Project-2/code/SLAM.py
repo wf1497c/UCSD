@@ -145,7 +145,7 @@ class getData():
 
 
     def initializeSLAM(self, num_particles):
-        MAP = occupancy_grid_map.initializeMap(0.1,-20,-20,100,100) # res, xmin, ymin, xmax, ymax
+        MAP = occupancy_grid_map.initializeMap(0.1,-20,-20,1400,1400) # res, xmin, ymin, xmax, ymax
         particles = particle.initializeParticles(num_particles)
         TRAJECTORY_w = {}
         TRAJECTORY_w['particle'] = []
@@ -161,7 +161,7 @@ class getData():
 if __name__ == '__main__':
     data = getData()
     MAP, particles, TRAJECTORY_w, TRAJECTORY_m = data.initializeSLAM(2)
-    time_all = 10000
+    time_all = 100000
 
     s = stereoModel()
     path_l = 'stereo_left/1544582648735466220.png'
@@ -176,7 +176,6 @@ if __name__ == '__main__':
     # relative distance of camera to vehicle are constant
     p_x_lcam, p_y_lcam = 1.64239, 0.247401 
     theta_cam = math.atan(p_y_lcam / p_x_lcam)
-    print(data.delta_pose[:,1000], data.delta_pose[:,200])
 
     for i in range(time_all):#len(data.lidar_data)):
         lidar_range = data.lidar_data[i, :]
@@ -255,8 +254,8 @@ if __name__ == '__main__':
         occupancy_grid_map.updateMap(MAP, x_w, y_w, pose[0], pose[1])
         #print(time()-start_time)
 
-        if (i % 400 == 0): #or i == len(lidar_range) - 1):
-            map_plot = MAP['plot']
+        if (i % 1000 == 999): #or i == len(lidar_range) - 1):
+            plt.figure()
             plt.imshow(MAP['plot'])
             particle_x = np.asarray(TRAJECTORY_m['particle'])[:].T[0]
             particle_y = np.asarray(TRAJECTORY_m['particle'])[:].T[1]
@@ -277,19 +276,3 @@ if __name__ == '__main__':
             plt.colorbar(color_map)
             filename = "results/log-odds/lo-d" + "s" + str(i+1) + "p" + str(5) + ".png"
             plt.savefig(filename, dpi=300, bbox_inches='tight')        
-            
-            
-            #print("occupancy grid and log-odds at scan =", i + 1, "of", len(lidar_range))
-            #print("current particle position:", TRAJECTORY_m['particle'][i].T[0][0], ",", TRAJECTORY_m['particle'][i].T[1][0])
-            #print("current odometry position:", TRAJECTORY_m['odometry'][i].T[0][0], ",", TRAJECTORY_m['odometry'][i].T[1][0])        
-
-    traj_x_m = []
-    traj_y_m = []
-    for i in range(len(TRAJECTORY_m['odometry'])):
-        traj_x_m.append(TRAJECTORY_m['odometry'][i][0])
-        traj_y_m.append(TRAJECTORY_m['odometry'][i][1])
-    
-    #plt.scatter(traj_x_m, traj_y_m, c = 'r')
-    #plt.savefig('Trajectory')
-
-    print('b')
