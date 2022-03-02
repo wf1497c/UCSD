@@ -13,8 +13,6 @@ def toc(tstart, name="Operation"):
   print('%s took: %s sec.\n' % (name,(time.time() - tstart)))
 
 def compute_stereo(path_l, path_r):
-  #path_l = 'code/data/image_left.png'
-  #path_r = 'code/data/image_right.png'
 
   image_l = cv2.imread(path_l, 0)
   image_r = cv2.imread(path_r, 0)

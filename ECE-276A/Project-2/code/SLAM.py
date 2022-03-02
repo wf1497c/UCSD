@@ -1,8 +1,5 @@
-from json import encoder
 import numpy as np
-import cv2
 import os
-import pandas as pd
 import matplotlib.pyplot as plt
 from torch import float64
 from pr2_utils import read_data_from_csv
@@ -11,7 +8,6 @@ import transformation
 import particle
 import occupancy_grid_map
 from textureMapping import stereoModel
-from time import time
 
 class getData():
     def __init__(self):
@@ -125,10 +121,6 @@ class getData():
         Output:
             d_pose: 3*N array represents pose change(2D position and orientation(yaw)) of a particle at each timestep 
         '''
-        #noise_v = np.random.normal(0,1,1)                                       # gaussian noise
-        #noise_w = np.random.normal(0,1,1)
-        #w_t += noise_w
-        #u_t += noise_v
         timestamp = self.encoder_timestamp
         time_diff = [pow(10,-9)*(timestamp[i] - timestamp[i-1]) 
                     for i in range(1,len(timestamp))]
@@ -145,7 +137,7 @@ class getData():
 
 
     def initializeSLAM(self, num_particles):
-        MAP = occupancy_grid_map.initializeMap(0.1,-20,-20,100,100) # res, xmin, ymin, xmax, ymax
+        MAP = occupancy_grid_map.initializeMap(0.1,-20,-20,60,60) # res, xmin, ymin, xmax, ymax
         particles = particle.initializeParticles(num_particles)
         TRAJECTORY_w = {}
         TRAJECTORY_w['particle'] = []
@@ -160,7 +152,7 @@ class getData():
 
 if __name__ == '__main__':
     data = getData()
-    MAP, particles, TRAJECTORY_w, TRAJECTORY_m = data.initializeSLAM(2)
+    MAP, particles, TRAJECTORY_w, TRAJECTORY_m = data.initializeSLAM(300)
     time_all = 100000
     images_l = os.listdir('stereo_left')
     images_r = os.listdir('stereo_right')

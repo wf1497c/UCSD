@@ -1,12 +1,7 @@
 import numpy as np
-import cv2
-import os
-import pandas as pd
 import matplotlib.pyplot as plt
-from pr2_utils import read_data_from_csv, bresenham2D
-import math
+from pr2_utils import bresenham2D
 import transformation
-from time import time
 
 def initializeMap(res, xmin, ymin, xmax, ymax, trust = None, optimism = None, occupied_thresh = None, free_thresh = None, confidence_limit = None):
     if trust == None:
@@ -16,7 +11,7 @@ def initializeMap(res, xmin, ymin, xmax, ymax, trust = None, optimism = None, oc
     if occupied_thresh == None:
         occupied_thresh = 0.85
     if free_thresh == None:
-        free_thresh = 0.5 # 0.5 # 0.25
+        free_thresh = 0.5 # prevent over confidence, but not very useful
     if confidence_limit == None:
         confidence_limit = 40
     
@@ -26,13 +21,13 @@ def initializeMap(res, xmin, ymin, xmax, ymax, trust = None, optimism = None, oc
     MAP['ymin']  = ymin
     MAP['xmax']  = xmax
     MAP['ymax']  = ymax
-    MAP['sizex'] = int(np.ceil((MAP['xmax'] - MAP['xmin']) / MAP['res'] + 1)) # number of horizontal cells
-    MAP['sizey'] = int(np.ceil((MAP['ymax'] - MAP['ymin']) / MAP['res'] + 1)) # number of vertical cells
-    MAP['map'] = np.zeros((MAP['sizex'], MAP['sizey']), dtype=np.float64) # DATA TYPE: char or int8
+    MAP['sizex'] = int(np.ceil((MAP['xmax'] - MAP['xmin']) / MAP['res'] + 1)) 
+    MAP['sizey'] = int(np.ceil((MAP['ymax'] - MAP['ymin']) / MAP['res'] + 1)) 
+    MAP['map'] = np.zeros((MAP['sizex'], MAP['sizey']), dtype=np.float64) 
     
     # Related to log-odds 
     MAP['occupied'] = np.log(trust / (1 - trust))
-    MAP['free'] = optimism * np.log((1 - trust) / trust) # Try to be optimistic about exploration, so weight free space
+    MAP['free'] = optimism * np.log((1 - trust) / trust) 
     MAP['confidence_limit'] = confidence_limit
 
     # Related to occupancy grid
@@ -66,16 +61,11 @@ def updateMap(MAP, x_w, y_w, x_cur, y_cur):
     MAP['map'][x_m,y_m] += MAP['occupied']#- MAP['free'] # we're going to add the MAP['free'] back in a second
     
     # initialize a mask where we will label the free cells
-    
-    #shape = MAP['map'].shape
-    #free_grid = np.zeros(shape).astype(np.int8) 
-    
     x_m = np.append(x_m, x_cur_m) # Must consider robot's current cell
     y_m = np.append(y_m, y_cur_m)
     contours = np.vstack((x_m, y_m)) # SWITCH
 
-    # find the cells that are free, and update the map
-    #cv2.drawContours(free_grid, [contours.T], -1, MAP['free'], -1) 
+    # find the cells that are free by bresenham2D
     
     for i in range(contours.shape[1]):
         hit_x_m, hit_y_m = x_m[i], y_m[i]
@@ -87,27 +77,9 @@ def updateMap(MAP, x_w, y_w, x_cur, y_cur):
 
         MAP['map'][frees[1,:].astype(int),frees[0,:].astype(int)] += MAP['free']
     
-    # prevent overconfidence
-    #start_time = time()
-    #MAP['map'][MAP['map'] > MAP['confidence_limit']] = MAP['confidence_limit']
-    #MAP['map'][MAP['map'] < -MAP['confidence_limit']] = -MAP['confidence_limit']
-    #
-    
     # update plot
-    occupied_grid = MAP['map'][0:x_cur_m+800,0:x_cur_m+800] > 0#MAP['occupied_thresh']
-    free_grid = MAP['map'][0:x_cur_m+800,0:x_cur_m+800] < 0#MAP['free_thresh']
+    occupied_grid = MAP['map'][0:x_cur_m+800,0:x_cur_m+800] > 0
+    free_grid = MAP['map'][0:x_cur_m+800,0:x_cur_m+800] < 0
     MAP['plot'][0:x_cur_m+800,0:x_cur_m+800][occupied_grid] = [0, 0, 0]
     MAP['plot'][0:x_cur_m+800,0:x_cur_m+800][free_grid] = [255, 255, 255] 
-    
-    #MAP['plot'][occupied_grid] = [0, 0, 0]
-    #MAP['plot'][free_grid] = [255, 255, 255] 
     MAP['plot'][y_m, x_m] = [255, 0, 0] # plot latest lidar scan hits
-    
-    #MAP['plot'][np.logical_and(np.logical_not(free_grid), np.logical_not(occupied_grid))] = [127, 127, 127]
-    
-    #plt.imshow(MAP['plot'])
-    #plt.savefig('occupied_grid')
-    #plt.close()
-    
-    #x_m, y_m = transformation.worldToMap(MAP, x_w, y_w)
-    
