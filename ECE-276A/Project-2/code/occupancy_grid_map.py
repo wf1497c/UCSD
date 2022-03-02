@@ -40,6 +40,7 @@ def initializeMap(res, xmin, ymin, xmax, ymax, trust = None, optimism = None, oc
     MAP['free_thresh'] = np.log(free_thresh / (1 - free_thresh))
     (h, w) = MAP['map'].shape
     MAP['plot'] = np.ones((h, w, 3), np.uint8) * 127
+    MAP['texture_map'] = np.zeros((h, w, 3), np.uint8)
     
     return MAP 
 

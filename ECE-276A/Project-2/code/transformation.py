@@ -64,7 +64,6 @@ def polar2cart(lidar_data, lidar_angle):
 def lidarToWorldTransform(x_cur, y_cur, yaw_cur):
     '''
     Input:
-        x_l, y_l: coordinates in lidar frame
         x_cur, y_cur: vehicle's coordinate in world frame
         yaw_cur: vehicle's yaw angle
     Output:
@@ -112,15 +111,12 @@ def worldToMap(MAP, x_w, y_w):
     Input:
         MAP: occupancy grid map
         x_w, y_w: coordinates in world frame
+    Ouput:
+        x_m, y_m: coordinates in map
     '''
     # convert from meters to cells
     x_m = np.ceil((x_w - MAP['xmin']) / MAP['res']).astype(np.int16) - 1
     y_m = np.ceil((y_w - MAP['ymin']) / MAP['res']).astype(np.int16) - 1
-
-    #indGood = np.logical_and(np.logical_and(np.logical_and((x_m > 1), (y_m > 1)), (x_m < MAP['sizex'])),(y_m < MAP['sizey']))
-    
-    #x_m = x_m[indGood]
-    #y_m = y_m[indGood]
     
     return x_m.astype(np.int), y_m.astype(np.int)
 
@@ -128,11 +124,12 @@ def opticalToWorldTransform(x_cur,y_cur,yaw_cur):
     '''
     Input:
         x_cur,y_cur,yaw_cur: pose of the vehicle in world frame
+        yaw_cur: vehicle's yaw angle
     Output:
-        v_T_l: Transformation from lidar to vehicle frame
+        w_T_o: Transformation from optical to world
     '''
     w_T_v = vehicleToWorldTransform(x_cur,y_cur,yaw_cur)
-    o_p_v = np.array([[1.64239, 0.247401, 1.58411, 1]])
+    o_p_v = np.array([[1.64239, 0.247401, 1.58411,1]])
     o_R_v = np.array([[-0.00680499, -0.0153215, 0.99985],
                     [-0.999977, 0.000334627, -0.00680066],
                     [-0.000230383, -0.999883, -0.0153234]]) # extrinsic
@@ -149,7 +146,7 @@ def opticalToWorld(x_o, y_o, x_cur, y_cur, yaw_cur): ###
         x_cur, y_cur: vehicle's coordinate in world frame
         yaw_cur: vehicle's yaw angle
     Output: 
-        x_w, y_w: point (x_o,y_o) in world frame
+        x_w, y_w: coordinates in world frame
     '''
     w_T_o = opticalToWorldTransform(x_cur,y_cur,yaw_cur)
     coordinates_l = np.vstack((np.vstack((x_o, y_o)), np.zeros((1, len(x_o))), np.ones((1, len(x_o)))))
@@ -158,17 +155,15 @@ def opticalToWorld(x_o, y_o, x_cur, y_cur, yaw_cur): ###
     x_w = coordinates_w[0, :]
     y_w = coordinates_w[1, :]
     z_w = coordinates_w[2, :]
-    
-    x_w = x_w[:, np.newaxis]
-    y_w = y_w[:, np.newaxis]
-    z_w = z_w[:, np.newaxis]
-    
-    # remove scans that are too close to the ground
-    indValid = (z_w > 0.1)
-    x_w = x_w[indValid]
-    y_w = y_w[indValid]
-    z_w = z_w[indValid]
 
     return (x_w, y_w, z_w)
 
-#cameraToWorld(0,0)
+def plotCalibration(x_m, y_m, pose):
+    x, y, yaw = pose[0], pose[1], pose[2]
+    c, s = np.cos(np.radians(120)), np.sin(np.radians(120))
+    R = np.array(((c, -s), (s, c)))
+    res = np.vstack([x_m, y_m])
+    res = R.dot(res)
+    res = res.astype(np.int)
+
+    return res[0,:]-x+60, res[1,:]+y-100

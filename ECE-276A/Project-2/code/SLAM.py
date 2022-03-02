@@ -162,10 +162,10 @@ if __name__ == '__main__':
     data = getData()
     MAP, particles, TRAJECTORY_w, TRAJECTORY_m = data.initializeSLAM(2)
     time_all = 100000
-
+    images_l = os.listdir('stereo_left')
+    images_r = os.listdir('stereo_right')
+    image_count = 0
     s = stereoModel()
-    path_l = 'stereo_left/1544582648735466220.png'
-    path_r = 'stereo_right/1544582648735466220.png'
 
     # relative distance of camera to vehicle are constant
     p_x_lcam, p_y_lcam = 1.64239, 0.247401 
@@ -176,7 +176,6 @@ if __name__ == '__main__':
         lidar_angle = np.linspace(-5, 185, 286) / 180 * np.pi
 
         # Remove scan points that are too close or too far
-        #lidar_range[lidar_range == 0] = 79 # !!! 
         indValid = [range < 80 and range > 0.1 for range in lidar_range]
         lidar_range = lidar_range[indValid]
         lidar_angle = lidar_angle[indValid]
@@ -232,22 +231,39 @@ if __name__ == '__main__':
         
         TRAJECTORY_w['particle'].append(pose)
         p_x_m, p_y_m = transformation.worldToMap(MAP, TRAJECTORY_w['particle'][i][0], TRAJECTORY_w['particle'][i][1])
-        
         TRAJECTORY_m['particle'].append(np.array([p_x_m, p_y_m, pose[2]]))
         
-
         # update left camera trajectories again
         x_cam_w, y_cam_w = TRAJECTORY_w['particle'][i][0] + math.cos(pose[2] - theta_cam), TRAJECTORY_w['particle'][i][1] + math.sin(pose[2] - theta_cam)
         TRAJECTORY_w['leftcamera'].append(np.array([x_cam_w, y_cam_w, pose[2]]))
         x_cam_m, y_cam_m = transformation.worldToMap(MAP, x_cam_w, y_cam_w)
         TRAJECTORY_m['leftcamera'].append(np.array([x_cam_m, y_cam_m, pose[2]]))
-        
-        # update map based on particle's view of lidar scan
-        #start_time = time()
-        occupancy_grid_map.updateMap(MAP, x_w, y_w, pose[0], pose[1])
-        #print(time()-start_time)
 
-        if (i % 1000 == 999): #or i == len(lidar_range) - 1):
+        #### too slow, unused when experiment on other parts####
+        # Compute texture mapping
+        # one picture for 950~1000 iteration
+        #image_l = "stereo_left/" + images_l[image_count]
+        #image_r = "stereo_right/" + images_r[image_count]
+        
+        #image_l_gray, pixel_uv, pixel_xyz_w, RGB = s.imageToWorld(image_l, image_r, 15)
+        #(x_w, y_w, z_w) = transformation.opticalToWorld(pixel_xyz_w[:,0], pixel_xyz_w[:,1], pose[0],pose[1],pose[2])
+        #x_m, y_m = transformation.worldToMap(MAP, x_w, y_w)
+        #x_m, y_m = transformation.plotCalibration(x_m, y_m, np.array([x_cam_m, y_cam_m, pose[2]], dtype=np.int))
+        #MAP['texture_map'][x_m,y_m,:] = RGB
+
+        #if i % 10 == 0:
+        #    plt.figure()
+        #    plt.imshow(MAP['texture_map'])
+        #    filename = "results/texture_map/s" + str(i+1) + "p" + str(5) + ".png"
+        #    plt.savefig('texture_map')  
+        
+        #if(i % 1000 == 0):
+        #    image_count += 1
+
+        # update map based on particle's view of lidar scan
+        occupancy_grid_map.updateMap(MAP, x_w, y_w, pose[0], pose[1])
+             
+        if (i % 300 == 300-1): #or i == len(lidar_range) - 1):
             plt.figure()
             plt.imshow(MAP['plot'])
             particle_x = np.asarray(TRAJECTORY_m['particle'])[:].T[0]
@@ -256,16 +272,14 @@ if __name__ == '__main__':
             odo_y = np.asarray(TRAJECTORY_m['odometry'])[:].T[1]
             plt.scatter(particle_x, particle_y, c='r', marker="s", s=2)
             plt.scatter(odo_x, odo_y, c='b', marker="s", s=2)
-            #plt.scatter(np.asarray(TRAJECTORY_m['leftcamera'])[:].T[0], np.asarray(TRAJECTORY_m['leftcamera'])[:].T[1], c='g', marker="s", s=2)
             plt.title(" trajectory after " + str(i+1) + " scans")
             filename = "results/trajectory/s" + str(i+1) + "p" + str(5) + ".png"
             plt.savefig(filename, dpi=300, bbox_inches='tight')                
             
             plt.figure()
-            norm_map = cv2.normalize(MAP['map'], None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-            color_map = plt.imshow(norm_map)
-            color_map.set_cmap("Blues_r")
-            #plt.title(" log-odds after " + str(i+1) + " scans")
+            color_map = plt.imshow(MAP['map'])
             plt.colorbar(color_map)
             filename = "results/log-odds/lo-d" + "s" + str(i+1) + "p" + str(5) + ".png"
-            plt.savefig(filename, dpi=300, bbox_inches='tight')        
+            plt.savefig(filename, dpi=300, bbox_inches='tight')     
+
+            

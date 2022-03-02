@@ -30,18 +30,19 @@ def compute_stereo(path_l, path_r):
   disparity = stereo.compute(image_l_gray, image_r_gray)
 
   #fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
+  #ax1.axis('off')
   #ax1.imshow(image_l)
   #ax1.set_title('Left Image')
+  #ax2.axis('off')
   #ax2.imshow(image_r)
   #ax2.set_title('Right Image')
+  #ax3.axis('off')
   #ax3.imshow(disparity, cmap='gray')
   #ax3.set_title('Disparity Map')
-  #disparity[disparity < 400] = 0
-
   #plt.imshow(disparity)
-  plt.savefig('Disparity Map')
+  #plt.savefig('Disparity Map')
 
-  return image_l_gray, image_r_gray, disparity
+  return image_l, image_l_gray, disparity
   
 
 def read_data_from_csv(filename):
@@ -270,12 +271,3 @@ def show_lidar():
   plt.show()
   plt.savefig('lidar')
 	
-
-if __name__ == '__main__':
-  path_l = 'code/data/image_left.png'
-  path_r = 'code/data/image_right.png'
-  compute_stereo(path_l, path_r)
-  #show_lidar()
-  #test_mapCorrelation()
-  #test_bresenham2D()
-  

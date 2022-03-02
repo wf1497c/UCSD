@@ -1,14 +1,8 @@
-from json import encoder
 import numpy as np
-import cv2
-import os
-import pandas as pd
 import matplotlib.pyplot as plt
 from torch import float64
 from pr2_utils import compute_stereo
-import math
 import transformation
-import particle
 import occupancy_grid_map
 import transformation
 
@@ -42,43 +36,22 @@ class stereoModel():
         cv = 2.5718049049377441e+02
         fsv = 7.7537235550066748e+02
         focal_length = self.focal_length
-        image_l_gray, image_r_gray, disparity_map = compute_stereo(path_l, path_r)
+        image_l, image_l_gray, disparity_map = compute_stereo(path_l, path_r)
 
         pixel_uv = []
         xyz_w = []
-        print(np.sum(disparity_map >= depth_threshold))
+        RGB = []
+        #print(np.sum(disparity_map >= depth_threshold))
         for u in range(disparity_map.shape[0]):
             for v in range(disparity_map.shape[1]):
                 if disparity_map[u,v] >= depth_threshold:
-                    z = fsu * baseline / disparity_map[u,v]#baseline * focal_length / disparity_map[u,v]
+                    pixel_value = image_l[u,v,:]
+                    z = fsu * baseline / disparity_map[u,v]#baseline * fsu / disparity_map[u,v]
                     y = z * (u - cu) / fsu
                     x = z * (v - cv) / fsv
                     pixel_uv.append([v,u])
                     xyz_w.append([x,y,z])
+                    RGB.append(pixel_value)
 
-        return image_l_gray, np.array(pixel_uv), np.array(xyz_w) #optical frame?
-
-if __name__ == '__main__':
-    path_l = 'stereo_left/1544582648735466220.png'
-    path_r = 'stereo_right/1544582648735466220.png'
-    s = stereoModel()
-    image_l_gray, pixel_uv, pixel_xyz_w = s.imageToWorld(path_l, path_r, 496)
-    #pixel_xyz_w = pixel_xyz_w[pixel_xyz_w[:,:,2] >= 50]
-    #dist = np.sqrt(pixel_xyz_w[:,1]**2 + pixel_xyz_w[:,0]**2)
-    dist = [pixel_xyz_w[:,2]]
-    depth_threshold = 50
-    #print(np.sum(dist > depth_threshold))
-    MAP = occupancy_grid_map.initializeMap(0.1,-20,-20,20,20)
-    (x_w, y_w, z_w) = transformation.opticalToWorld(pixel_xyz_w[:,0], pixel_xyz_w[:,1], 0.06,-0.01,0.03)
-    x_m, y_m = transformation.worldToMap(MAP, x_w, y_w)
-
-    #plt.plot(pixel_xyz_w[:,2])
-    #plt.savefig('height')
-
-    
-    #plt.imshow(image_l_gray)
-    #print(len(pixel_uv[:,0]), len(pixel_uv[:,1]))
-    plt.imshow(MAP['plot'])
-    plt.scatter(x_m, y_m, c='r', s=2)
-    plt.savefig('Disparity on map')
+        return image_l_gray, np.array(pixel_uv), np.array(xyz_w), np.array(RGB, dtype=np.uint8) #optical frame?
 

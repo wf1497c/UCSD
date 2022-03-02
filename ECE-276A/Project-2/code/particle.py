@@ -9,10 +9,10 @@ def initializeParticles(num = None, n_thresh = None, noise_cov = None):
     if num == None:
         num = 100
     if n_thresh == None:
-        n_thresh = 0.1 * num # set threshold to 20% of original number of particles to resample
+        n_thresh = 0.1 * num # set threshold to 10% of original number of particles to resample
     if noise_cov == None:
-        noise_cov = np.zeros((3,3)) # for debugging purposes
-        noise_cov = 0.5 * np.eye(3) # set noise covariances for multivariate Gaussian. This is 10% of the delta_pose movement (check predictParticles)
+        noise_cov = np.zeros((3,3))
+        noise_cov = 0.5 * np.eye(3) 
         noise_cov = np.array([[.1, 0, 0], [0, .1, 0], [0, 0, 0.005]])
     
     PARTICLES = {}
@@ -27,8 +27,11 @@ def initializeParticles(num = None, n_thresh = None, noise_cov = None):
     return PARTICLES
 
 def predictParticles(PARTICLES, d_x, d_y, d_yaw, x_prev, y_prev, yaw_prev):
+    # noise type
     noise_cov =  np.matmul(PARTICLES['noise_cov'], np.abs(np.array([[0.015,0,0],[0,0.015,0],[0,0,0.5]])))#[[d_x, 0, 0], [0, d_y, 0], [0, 0, d_yaw]]))) 
-        
+    #noise_cov =  np.matmul(PARTICLES['noise_cov'], np.abs(np.array([[d_x*0.015,0,0],[0,d_y*0.015,0],[0,0,d_yaw*0.5]])))
+    #noise_cov =  np.matmul(PARTICLES['noise_cov'], np.abs(np.array([[np.sqrt(abs(d_x))*0.015,0,0],[0,np.sqrt(abs(d_y))*0.015,0],[0,0,np.sqrt(abs(d_yaw))*0.5]])))
+    
     # create hypothesis (particles) poses
     noise = np.random.multivariate_normal([0, 0, 0], noise_cov, PARTICLES['num'])
     PARTICLES['poses'] = noise + np.array([[x_prev, y_prev, yaw_prev]])
@@ -42,7 +45,7 @@ def updateParticles(PARTICLES, MAP, x_l, y_l, TRAJECTORY_m, init=False):
     n_eff = 1 / np.sum(np.square(PARTICLES['weights']))
     
     if (n_eff < PARTICLES['n_thresh']):
-        print("resampling!")
+        print("-----------resampling-----------")
         resampleParticles(PARTICLES)
     
     correlations = np.zeros(PARTICLES['num'])
@@ -64,8 +67,6 @@ def updateParticles(PARTICLES, MAP, x_l, y_l, TRAJECTORY_m, init=False):
     map_shape = plot.shape
     particle_plot = np.zeros(map_shape)
     
-    
-    
     for i in range(PARTICLES['num']):
         x_w, y_w, _ = transformation.lidarToWorld(x_l, y_l, PARTICLES['poses'][i][0], PARTICLES['poses'][i][1], PARTICLES['poses'][i][2])        
         x_m, y_m = transformation.worldToMap(MAP, x_w, y_w)
@@ -76,17 +77,17 @@ def updateParticles(PARTICLES, MAP, x_l, y_l, TRAJECTORY_m, init=False):
             indvalid = np.logical_and(indvalid, np.logical_and(y_m-cur_y_m+150 >=0, x_m-cur_x_m+150 >= 0))
             x_m, y_m = x_m[indvalid], y_m[indvalid]
             particle_plot[y_m-cur_y_m+150, x_m-cur_x_m+150] = [0,1,0]
-            correlations[i] = np.sum(np.logical_and(plot, particle_plot)) # switched x and y # too slow
+            correlations[i] = np.sum(np.logical_and(plot, particle_plot)) # too slow
             particle_plot[y_m-cur_y_m+150, x_m-cur_x_m+150] = [0,0,0]
         else:
             indvalid = np.logical_and(indvalid, np.logical_and(y_m-cur_y_m+800 < 1600, x_m-cur_x_m+800 < 1600))
             indvalid = np.logical_and(indvalid, np.logical_and(y_m-cur_y_m+800 >=0, x_m-cur_x_m+800 >= 0))
             x_m, y_m = x_m[indvalid], y_m[indvalid]
             particle_plot[y_m-cur_y_m+150, x_m-cur_x_m+150] = [0,1,0]
-            correlations[i] = np.sum(np.logical_and(plot, particle_plot)) # switched x and y # too slow
+            correlations[i] = np.sum(np.logical_and(plot, particle_plot)) # too slow
             particle_plot[y_m-cur_y_m+800, x_m-cur_x_m+800] = [0,0,0]
     
-    weights = special.softmax(correlations - np.max(correlations)) # np.multiply(PARTICLES['weights'], scipy.special.softmax(correlations)) # multiply or add or replace?
+    weights = special.softmax(correlations - np.max(correlations)) 
 
     if (np.count_nonzero(correlations) == 0):
         print("ALL ZERO CORRELATIONS")
