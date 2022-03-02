@@ -137,7 +137,7 @@ class getData():
 
 
     def initializeSLAM(self, num_particles):
-        MAP = occupancy_grid_map.initializeMap(0.1,-20,-20,60,60) # res, xmin, ymin, xmax, ymax
+        MAP = occupancy_grid_map.initializeMap(0.1,-20,-20,100,100) # res, xmin, ymin, xmax, ymax
         particles = particle.initializeParticles(num_particles)
         TRAJECTORY_w = {}
         TRAJECTORY_w['particle'] = []
@@ -152,7 +152,7 @@ class getData():
 
 if __name__ == '__main__':
     data = getData()
-    MAP, particles, TRAJECTORY_w, TRAJECTORY_m = data.initializeSLAM(300)
+    MAP, particles, TRAJECTORY_w, TRAJECTORY_m = data.initializeSLAM(2)
     time_all = 100000
     images_l = os.listdir('stereo_left')
     images_r = os.listdir('stereo_right')
@@ -255,7 +255,7 @@ if __name__ == '__main__':
         # update map based on particle's view of lidar scan
         occupancy_grid_map.updateMap(MAP, x_w, y_w, pose[0], pose[1])
              
-        if (i % 300 == 300-1): #or i == len(lidar_range) - 1):
+        if (i % 100 == 100-1): #or i == len(lidar_range) - 1):
             plt.figure()
             plt.imshow(MAP['plot'])
             particle_x = np.asarray(TRAJECTORY_m['particle'])[:].T[0]
