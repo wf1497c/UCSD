@@ -36,7 +36,7 @@ def load_data(file_name):
     return t,features,linear_velocity,angular_velocity,K,b,imu_T_cam
 
 
-def visualize_trajectory_2d(pose,path_name="Unknown",show_ori=False):
+def visualize_trajectory_2d(pose, landmarks_position, path_name="Unknown",show_ori=False):
     '''
     function to visualize the trajectory in 2D
     Input:
@@ -45,6 +45,10 @@ def visualize_trajectory_2d(pose,path_name="Unknown",show_ori=False):
                 4*4 matrix is in SE(3)
     '''
     fig,ax = plt.subplots(figsize=(5,5))
+
+    landmarks_position = landmarks_position[:,~np.isnan(landmarks_position[0,:])]
+    ax.plot(landmarks_position[0,:], landmarks_position[1,:], 'g.', markersize = 1.5)
+
     n_pose = pose.shape[2]
     ax.plot(pose[0,3,:],pose[1,3,:],'r-',label=path_name)
     ax.scatter(pose[0,3,0],pose[1,3,0],marker='s',label="start")
@@ -70,6 +74,7 @@ def visualize_trajectory_2d(pose,path_name="Unknown",show_ori=False):
     ax.grid(False)
     ax.legend()
     plt.show(block=True)
+    plt.savefig('test')
 
     return fig, ax
 

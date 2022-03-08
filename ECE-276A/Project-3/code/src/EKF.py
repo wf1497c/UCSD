@@ -64,7 +64,7 @@ class EKFSLAM():
 
         pass
     
-    def Predict(self, v, w, tau, weight_v, weight_w):
+    def prediction(self, t, v, w, tau, weight_v, weight_w):
         '''
         Input:
             v: 3 X 1 linear velocity
@@ -86,10 +86,15 @@ class EKFSLAM():
         
         car['mean'] = car['mean'] @ expm(tau * u_hat) # in SE(3)
         car['covariance'] = expm(-tau * u_curly_hat) @ car['covariance'] @ expm(-tau * u_curly_hat).T + W
+        car['trajectory'][:,:,t] = car['mean']
 
         self.car = car
 
-    def Update(self, cur_features, K, b, imu_T_cam, weight_v = 1000):
+        # movement noise
+#    noise = np.block([[np.random.normal(0, weight_omega, (3, 3)), np.random.normal(0, weight_v, (3, 1))],
+#                      [np.zeros((1, 4))]])
+
+    def Update(self, t, cur_features, K, b, imu_T_cam, weight_v = 1000):
         V = np.eye(4) * weight_v
         M = cameraCalibrationMatrix(K, b)
         P = np.eye(3, 4)
@@ -130,4 +135,6 @@ class EKFSLAM():
             Landmarks['mean'][:, i] = Landmarks['mean'][:, i] + P.T @ Kalman_gain @ (z - z_tilde)
             Landmarks['covariance'][:, :, i] = (np.eye(3) - Kalman_gain @ H) @ Landmarks['covariance'][:, :, i]
 
+        Landmarks['trajectory'][:,:,t] = Landmarks['mean']
+        self.landmarks = Landmarks
             #self.car = car

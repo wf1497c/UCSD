@@ -36,10 +36,11 @@ if __name__ == '__main__':
 	EKF = EKFSLAM(car, landmarks)
 
 	for t in range(1,time.shape[1]):
+		print('--------' + str(t+1) + 'step --------')
 		tau = time[0,t] - time[0,t-1] 
     	# (a) IMU Localization via EKF Prediction
-		EKF.Predict(linear_velocity[:, t], angular_velocity[:, t], tau, 0.00001, 0.0001)
-		EKF.Update(features[:,:,t], K, b, imu_T_cam, 0.001)
+		EKF.prediction(t, linear_velocity[:, t], angular_velocity[:, t], tau, 0.00001, 0.0001)
+		EKF.Update(t, features[:,:,t], K, b, imu_T_cam, 0.001)
         # record current poses
         #Car['trajectory'][:, :, i] = world_T_imu(Car['mean']) # inv(inv pose)
         #Landmarks['trajectory'][:, :, i - 1] = Landmarks['mean'][:]
@@ -54,7 +55,8 @@ if __name__ == '__main__':
         #EKF_visual_inertial_update(Car, Landmarks, features[:, :, i], K, b, cam_T_imu, 3500)
         
         # plotting
-        #if ((i - 1) % 100 == 0 or i == t.shape[1] - 1):
+		if ((t - 1) % 100 == 0):
+			visualize_trajectory_2d(car['trajectory'], landmarks['trajectory'][:,:,t], show_ori = True)
         	# You can use the function below to visualize the robot pose over time
         #    visualize_trajectory_2d(Car['trajectory'], Landmarks['mean'], Car['trajectory_vi'], Landmarks['mean_vi'], timestamp = str(i), path_name = filename[7:-4], show_ori = True, show_grid = True)
 
@@ -66,6 +68,6 @@ if __name__ == '__main__':
 
 	# You can use the function below to visualize the robot pose over time
 	# visualize_trajectory_2d(world_T_imu, show_ori = True)
-	visualize_trajectory_2d(world_T_imu, show_ori = True)
+	
 
 	print('a')
