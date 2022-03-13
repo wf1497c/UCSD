@@ -90,11 +90,7 @@ class EKFSLAM():
 
         self.car = car
 
-        # movement noise
-#    noise = np.block([[np.random.normal(0, weight_omega, (3, 3)), np.random.normal(0, weight_v, (3, 1))],
-#                      [np.zeros((1, 4))]])
-
-    def Update(self, t, cur_features, K, b, imu_T_cam, weight_v = 1000):
+    def update(self, t, cur_features, K, b, imu_T_cam, weight_v = 1000):
         V = np.eye(4) * weight_v
         M = cameraCalibrationMatrix(K, b)
         P = np.eye(3, 4)
@@ -138,3 +134,55 @@ class EKFSLAM():
         Landmarks['trajectory'][:,:,t] = Landmarks['mean']
         self.landmarks = Landmarks
             #self.car = car
+    
+    def visual_inertial_update(self, t, cur_features, K, b, imu_T_cam, weight_v = 1000):
+        # covariance for measurement noise
+        V = weight_v * np.eye(4)
+        P = np.eye(3, 4)
+        M = cameraCalibrationMatrix(K, b)
+        Landmarks = self.landmarks
+        car = self.car
+
+        # camera
+        w_T_cam = car['mean_vi'] @ imu_T_cam
+        
+        for i in range(cur_features.shape[1]):
+            z = cur_features[:,i]
+            d = cur_features[0,i] - cur_features[2,i]
+            z0 = K[0, 0] * b / d
+            z = cur_features[:, i][:]
+            
+            # only operate for landmarks present in current timestep
+            if (np.all(z == -1)):
+                continue
+
+            if (np.all(np.isnan(Landmarks['mean_vi'][:, i]))):
+                #camera_frame_coords = z0 * np.linalg.inv(M) @ np.array([[z],]).T
+                x_cam = z0 * (z[0] - M[0,2]) / M[0,0]
+                y_cam = z0 * (z[1] - M[1,2]) / M[1,1]
+                landmark_cam = np.array([[x_cam, y_cam, z0, 1]]).T
+                landmark_world = w_T_cam @ landmark_cam
+                Landmarks['mean_vi'][:, i] = landmark_world[:,0]
+
+                continue
+        
+            cam_T_w = reverseTransformation(w_T_cam)
+            landmark_cam = cam_T_w @ Landmarks['mean_vi'][:, i]
+
+            z_tilde = M @ projection(landmark_cam) 
+            H = M @ projection_derivative(landmark_cam) @ cam_T_w @ P.T
+
+            # perform the visual EKF update
+            Kalman_gain = Landmarks['covariance_vi'][:, :, i] @ H.T @ np.linalg.inv(H @ Landmarks['covariance_vi'][:, :, i] @ H.T + V)
+            Landmarks['mean_vi'][:, i] = Landmarks['mean_vi'][:, i] + P.T @ Kalman_gain @ (z - z_tilde)
+            Landmarks['covariance_vi'][:, :, i] = (np.eye(3) - Kalman_gain @ H) @ Landmarks['covariance_vi'][:, :, i]
+            
+            cur_landmark = car['mean_vi'] @ Landmarks['mean_vi'][:, i]
+            cam_T_imu = reverseTransformation(imu_T_cam)
+            H = M @ projection_derivative(cam_T_imu @ cur_landmark) @ cam_T_imu @ np.block([[np.eye(3), -hatMapping(cur_landmark[:3])],
+                                                                                            [np.zeros((1, 6))]])
+            # perform the inertial EKF update
+            Kalman_gain = car['covariance_vi'] @ H.T @ np.linalg.inv(H @ car['covariance_vi'] @ H.T + V)
+            
+            car['mean_vi'] = expm(hatMapping_6(Kalman_gain @ (z - z_tilde))) @ car['mean_vi']
+            car['covariance_vi'] = (np.eye(6) - Kalman_gain @ H) @ car['covariance_vi']
