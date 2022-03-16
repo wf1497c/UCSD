@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from transforms3d.euler import mat2euler
+import imageio
 
 def load_data(file_name):
     '''
@@ -36,7 +37,7 @@ def load_data(file_name):
     return t,features,linear_velocity,angular_velocity,K,b,imu_T_cam
 
 
-def visualize_trajectory_2d(pose, landmarks_position, path_name="Unknown",show_ori=False):
+def visualize_trajectory_2d(pose, landmarks_position, filename, filename_gif, path_name="Predicted Trajectory",show_ori=False):
     '''
     function to visualize the trajectory in 2D
     Input:
@@ -50,7 +51,7 @@ def visualize_trajectory_2d(pose, landmarks_position, path_name="Unknown",show_o
     ax.plot(landmarks_position[0,:], landmarks_position[1,:], 'g.', markersize = 1.5)
 
     n_pose = pose.shape[2]
-    ax.plot(pose[0,3,:],pose[1,3,:],'r-',label=path_name)
+    ax.plot(pose[0,3,:],pose[1,3,:],'ro',label=path_name, markersize = 1.5)
     ax.scatter(pose[0,3,0],pose[1,3,0],marker='s',label="start")
     ax.scatter(pose[0,3,-1],pose[1,3,-1],marker='o',label="end")
   
@@ -73,8 +74,15 @@ def visualize_trajectory_2d(pose, landmarks_position, path_name="Unknown",show_o
     ax.axis('equal')
     ax.grid(False)
     ax.legend()
+    ax.set_xlim([-1300, 500])
+    ax.set_ylim([-500, 1000])
     plt.show(block=True)
-    plt.savefig('test')
+    plt.savefig(filename)
+
+    
+    with imageio.get_writer(filename_gif, mode='I') as writer:
+        image = imageio.imread(filename)
+        writer.append_data(image)
 
     return fig, ax
 
